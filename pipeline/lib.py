@@ -27,7 +27,7 @@ def plot(desc):
         l = re.sub(r'^episode\s*\d+\s*[:\-–]+\s*-*\s*', '', l, flags=re.I).strip(' -–:')
         if len(l) > 25:
             out.append(l)
-    return ' '.join(out)[:220]
+    return ' '.join(out)[:600]
 
 
 def ingest(raw, playlist_titles=()):
@@ -54,7 +54,7 @@ def ingest(raw, playlist_titles=()):
             if m:
                 e = int(m.group(1) or m.group(2))
     p = plot(raw.get('description', ''))
-    txt = SHOW.sub(' ', t + ' . ' + p)
+    txt = SHOW.sub(' ', t + ' . ' + p[:220])
     pl = SHOW.sub(' ', ' '.join(playlist_titles))
     return {'id': raw['id'], 't': t, 'p': raw['published'][:10], 's': s, 'v': raw['views'], 'l': raw['likes'],
             'k': kind, 'e': e,
@@ -109,6 +109,7 @@ def build(videos):
         if len(g) > 1:
             g.sort(key=lambda o: (-(900 <= o['s'] <= 2700), -o['v']))
             g[0]['o'] = [[a['id'], a['p'], a['s'], a['v']] for a in g[1:]]
+            g[0]['d'] = max((a['d'] for a in g), key=len)   # keep the fullest story text for search
             drop |= {a['id'] for a in g[1:]}
     out = []
     for o in data:
