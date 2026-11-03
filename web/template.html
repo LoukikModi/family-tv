@@ -37,7 +37,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:16px;max-
 </style></head><body>
 <header>
 <h1>TMKOC <b>Tube</b></h1>
-<div class="tabs"><button data-k="episode" class="on">Episodes</button><button data-k="movie">Full Movies</button></div>
+<div class="tabs"><button data-k="episode" class="on">Episodes</button><button data-k="movie">Full Movies</button><button data-k="story">Storylines</button></div>
 <input id="q" type="search" placeholder="Search title, character, year…">
 <div class="mode" id="modes"></div>
 </header>
@@ -85,7 +85,7 @@ const LENS={'u20':'Under 20 min','20-30':'20–30 min','30-45':'30–45 min','45
 document.getElementById('len').innerHTML+=Object.entries(LENS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
 const inLen=(s,l)=>!l||(l==='u20'?s<1200:l==='20-30'?s>=1200&&s<1800:l==='30-45'?s>=1800&&s<2700:s>=2700);
 function rnd(id){let h=2166136261^Math.floor(S.seed*1e9);for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
-const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/shakharam/g,'sakharam');
 const blob=d=>d._s||(d._s=norm(d.t+' '+d.d+' '+d.p+' '+(d.e||'')));
 function build(){
  const qs=norm(S.q).split(/\s+/).filter(Boolean);
@@ -110,12 +110,14 @@ function build(){
 }
 function card(d){
  const w=store.pos[d.id]?Math.min(100,store.pos[d.id]/d.s*100):0;
- return `<div class="card${store.watched[d.id]?' seen':''}${S.cur===d.id?' cur':''}" data-id="${d.id}"><div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${d.id}/mqdefault.jpg" alt=""><span class="d">${fmt(d.s)}</span>${w?`<div class="w" style="width:${w}%"></div>`:''}</div><div class="t"><div>${d.e?`<span class="ep">${d.x?'~':''}${d.e}</span>`:''}${esc(clean(d.t))}</div><div class="meta">${d.p} · ${d.v.toLocaleString()} views · 👍 ${(d.q/10).toFixed(1)}%</div>${d.d?`<div class="pl">${esc(d.d)}</div>`:''}</div></div>`}
+ return `<div class="card${store.watched[d.id]?' seen':''}${S.cur===d.id?' cur':''}" data-id="${d.id}"><div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${d.id}/mqdefault.jpg" alt=""><span class="d">${fmt(d.s)}</span>${w?`<div class="w" style="width:${w}%"></div>`:''}</div><div class="t"><div>${d.e?`<span class="ep">${d.x?'~':''}${d.e}</span>`:''}${esc(clean(d.t))}</div><div class="meta">${d.k==='story'&&arcName(d.t)?'📖 '+esc(arcName(d.t))+' · ':''}${d.p} · ${d.v.toLocaleString()} views · 👍 ${(d.q/10).toFixed(1)}%</div>${d.d?`<div class="pl">${esc(d.d)}</div>`:''}</div></div>`}
 const clean=t=>{let s=t.split('|')[0].trim().replace(/\s*[-–]\s*Taarak Mehta Ka Oo?ltah Chash?mah.*$/i,'').replace(/^Taarak Mehta Ka Oo?ltah Chash?mah\s*[-–]\s*/i,'').replace(/\s*[-–]\s*(Full Episode|FE)\s*$/i,'');return s||t};
+const arcName=t=>{const p=t.split('|').map(x=>x.trim());const l=p[p.length-1];return /taarak mehta|full movie|hindi comedy/i.test(l)?'':l};
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function render(){
  build();S.shown=0;document.getElementById('grid').innerHTML='';more();
- document.getElementById('arcs').innerHTML=S.rng?`<span class="chip on" data-x="1">Storyline: episodes ${S.rng[0]}–${S.rng[1]} ✕</span>`:S.arcs.map(r=>`<span class="chip" data-lo="${r.lo}" data-hi="${r.hi}">📖 Whole storyline: episodes ${r.lo}–${r.hi} (${r.n} match your search)</span>`).join('');
+ const NAMES={episode:'Episodes',movie:'Full Movies',story:'Storylines'};const qs2=norm(S.q).split(/\s+/).filter(Boolean);const other=qs2.length?['episode','movie','story'].filter(k=>k!==S.kind).map(k=>[k,DATA.filter(d=>d.k===k&&qs2.every(w=>blob(d).includes(w))).length]).filter(x=>x[1]>0):[];
+ document.getElementById('arcs').innerHTML=other.map(([k,n])=>`<span class="chip" data-tab="${k}">Also in ${NAMES[k]}: ${n}</span>`).join('')+(S.rng?`<span class="chip on" data-x="1">Storyline: episodes ${S.rng[0]}–${S.rng[1]} ✕</span>`:S.arcs.map(r=>`<span class="chip" data-lo="${r.lo}" data-hi="${r.hi}">📖 Whole storyline: episodes ${r.lo}–${r.hi} (${r.n} match your search)</span>`).join(''));
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.kind));
  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.mode));
  document.getElementById('algo').style.display=S.mode==='mix'?'':'none';
@@ -126,7 +128,7 @@ function more(){
  document.getElementById('more').style.display=S.shown<S.list.length?'':'none';
 }
 document.getElementById('more').onclick=more;
-document.getElementById('arcs').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;if(c.dataset.x){S.rng=null}else{S.rng=[+c.dataset.lo-3,+c.dataset.hi+2];S.q='';document.getElementById('q').value='';S.mode='order'}render()};
+document.getElementById('arcs').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;if(c.dataset.tab){S.kind=c.dataset.tab;S.rng=null}else if(c.dataset.x){S.rng=null}else{S.rng=[+c.dataset.lo-3,+c.dataset.hi+2];S.q='';document.getElementById('q').value='';S.mode='order'}render()};
 document.getElementById('grid').onclick=e=>{const c=e.target.closest('.card');if(c)play(c.dataset.id)};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.kind=b.dataset.k;render()});
 document.getElementById('q').oninput=e=>{S.q=e.target.value;render()};

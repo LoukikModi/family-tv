@@ -11,6 +11,7 @@ SHOW = re.compile(r'taarak mehta k[ao] oo?lt?[ah]+ chash?mah|tmkoc|तारक 
 EP_TITLE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})', re.I)
 EP_DESC = re.compile(r'\bepisode\s*(?:no\.?)?\s*[:#\-]?\s*(\d{1,4})\b|\bep\.?\s*(?:no\.?)?\s*[:#\-]?\s*(\d{3,4})\b', re.I)
 WEEKLY = re.compile(r'weekly\s*reliv', re.I)
+COMPILATION = re.compile(r'best of|compilation|funny moments|collection|marathon|non[- ]?stop|top \d+|back to back|jukebox|laughter|laugh ?out|promo|precap|trailer|sneak peek|special moments', re.I)
 
 
 def seconds(d):
@@ -19,7 +20,13 @@ def seconds(d):
     return h * 3600 + mi * 60 + s
 
 
+BOILER = re.compile(r'about taarak mehta|star cast|produced by|the show is inspired|written by|directed by|follow us|stay tuned|for latest updates', re.I)
+
+
 def plot(desc):
+    m = BOILER.search(desc)
+    if m:
+        desc = desc[:m.start()]
     out = []
     for l in (l.strip() for l in desc.split('\n')):
         if not l or re.search(r'https?://|click here|subscribe|download|show name|^#|follow us|watch (full|more)|sony liv|©|^-+$|^episode\s*\d+\s*[:\-–]*\s*-*$', l, re.I):
@@ -42,6 +49,10 @@ def ingest(raw, playlist_titles=()):
         kind = 'movie'
     elif (re.search(r'\b(ep|episode)s?\.?\s*\d{1,4}', tl) or 'full episode' in tl) and s <= 2700:
         kind = 'episode'
+    elif 900 <= s <= 1620 and not COMPILATION.search(tl):
+        kind = 'episode'          # ~15-27 min single episode whose title has no 'Full Episode' / 'Ep N' tag
+    elif 2400 < s <= 7500:
+        kind = 'story'            # 40-125 min storyline compilations (several episodes joined)
     else:
         return None
     e = None
@@ -72,6 +83,33 @@ def build(videos):
     data = [dict(v) for v in videos]
     for o in data:
         o['x'] = 0
+
+    def merge(g):
+        g.sort(key=lambda o: (-(900 <= o['s'] <= 2700), -o['v']))
+        best = g[0]
+        if best['e'] is None:
+            es = [a['e'] for a in g if a['e']]
+            if es:
+                best['e'] = collections.Counter(es).most_common(1)[0][0]
+        alts = []
+        for a in g[1:]:
+            alts.append([a['id'], a['p'], a['s'], a['v']])
+            alts += a.get('o', [])
+        best['o'] = (best.get('o') or []) + alts
+        best['d'] = max((a['d'] for a in g), key=len)      # keep the fullest story text for search
+        return {a['id'] for a in g[1:]}
+
+    # same long story text + similar length = the same episode uploaded more than once
+    byplot = collections.defaultdict(list)
+    for o in data:
+        if o['k'] == 'episode' and len(o['d']) >= 140:
+            byplot[o['d'][:140].lower()].append(o)
+    gone = set()
+    for g in byplot.values():
+        if 1 < len(g) <= 6 and max(a['s'] for a in g) - min(a['s'] for a in g) <= 300 \
+                and len({a['e'] for a in g if a['e']}) <= 1:
+            gone |= merge(g)
+    data = [o for o in data if o['id'] not in gone]
     # estimate missing episode numbers from neighbours by upload date (flagged x=1)
     nums = sorted((_ord(o['p']), o['e']) for o in data if o['k'] == 'episode' and o['e'])
     ds = [d for d, _ in nums]
@@ -107,10 +145,7 @@ def build(videos):
     drop = set()
     for g in groups.values():
         if len(g) > 1:
-            g.sort(key=lambda o: (-(900 <= o['s'] <= 2700), -o['v']))
-            g[0]['o'] = [[a['id'], a['p'], a['s'], a['v']] for a in g[1:]]
-            g[0]['d'] = max((a['d'] for a in g), key=len)   # keep the fullest story text for search
-            drop |= {a['id'] for a in g[1:]}
+            drop |= merge(g)
     out = []
     for o in data:
         if o['id'] in drop:
