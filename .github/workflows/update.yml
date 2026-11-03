@@ -8,6 +8,9 @@ on:
     - cron: '0 17 * * 1-6'                      # 22:30 IST
     - cron: '10 * * * *'                        # every hour, catches odd uploads
     - cron: '30 2 * * 0'                        # Sunday: full refresh of views/likes
+  push:
+    branches: [main]
+    paths: ['web/**', 'pipeline/**', '.github/workflows/update.yml']
   workflow_dispatch:
     inputs:
       mode:
@@ -29,7 +32,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.upd.outputs.changed }}
+      deploy: ${{ steps.upd.outputs.changed == 'true' || github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -52,15 +55,15 @@ jobs:
             git push
           fi
       - uses: actions/configure-pages@v5
-        if: steps.upd.outputs.changed == 'true'
+        if: steps.upd.outputs.changed == 'true' || github.event_name == 'push'
       - uses: actions/upload-pages-artifact@v3
-        if: steps.upd.outputs.changed == 'true'
+        if: steps.upd.outputs.changed == 'true' || github.event_name == 'push'
         with:
           path: public
 
   deploy:
     needs: build
-    if: needs.build.outputs.changed == 'true'
+    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
