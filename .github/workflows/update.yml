@@ -10,7 +10,7 @@ on:
     - cron: '30 2 * * 0'                        # Sunday: full refresh of views/likes
   push:
     branches: [main]
-    paths: ['web/**', 'pipeline/**', '.github/workflows/update.yml']
+    paths: ['web/**', 'pipeline/**', 'data/**', '.github/workflows/update.yml']
   workflow_dispatch:
     inputs:
       mode:
