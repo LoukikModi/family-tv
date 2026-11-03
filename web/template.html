@@ -65,14 +65,15 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:16px;max-
 </main>
 <script>
 const BUNDLE=/*DATA*/{data:[],chars:[],themes:[]};const DATA=BUNDLE.data;
-const S={kind:'episode',mode:'order',q:'',rng:null,arcs:[],cs:new Set(),ts:new Set(),year:'',len:'',unseen:false,list:[],shown:0,cur:null,auto:true,seed:Math.random(),w:{views:30,quality:50,recent:10,length:0,random:0}};
+const S={kind:'episode',mode:'order',q:'',arc:'',arcLabel:'',rng:null,arcs:[],cs:new Set(),ts:new Set(),year:'',len:'',unseen:false,list:[],shown:0,cur:null,auto:true,seed:Math.random(),w:{views:30,quality:50,recent:10,length:0,random:0}};
 let store={watched:{},pos:{}};
 try{const x=localStorage.getItem('tmkoc');if(x)store=JSON.parse(x)}catch(e){}
 const save=()=>{try{localStorage.setItem('tmkoc',JSON.stringify(store))}catch(e){}};
 const fmt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+'h '+m+'m':m+' min'};
 const MODES={order:'Watch in order',resume:'Continue',new:'Newest',pop:'Most viewed',best:'Best of',rand:'Random classics',mix:'My mix'};
 const modes=document.getElementById('modes');
-for(const k in MODES){const b=document.createElement('button');b.textContent=MODES[k];b.dataset.k=k;b.onclick=()=>{S.mode=k;if(k==='rand')S.seed=Math.random();render()};modes.append(b)}
+for(const k in MODES){const b=document.createElement('button');b.textContent=MODES[k];b.dataset.k=k;b.onclick=()=>{S.mode=k;if(k==='rand')S.seed=Math.random();render()};
+modes.append(b)}
 const SL={views:'Popularity',quality:'Quality (likes)',recent:'Recent',length:'Longer',random:'Random'};
 const sl=document.getElementById('sliders');
 for(const k in SL){sl.insertAdjacentHTML('beforeend',`<div class="sl"><span>${SL[k]}</span><input type="range" min="0" max="100" value="${S.w[k]}" data-k="${k}"><span id="v_${k}">${S.w[k]}</span></div>`)}
@@ -85,11 +86,17 @@ const LENS={'u20':'Under 20 min','20-30':'20–30 min','30-45':'30–45 min','45
 document.getElementById('len').innerHTML+=Object.entries(LENS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
 const inLen=(s,l)=>!l||(l==='u20'?s<1200:l==='20-30'?s>=1200&&s<1800:l==='30-45'?s>=1800&&s<2700:s>=2700);
 function rnd(id){let h=2166136261^Math.floor(S.seed*1e9);for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
-const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/shakharam/g,'sakharam');
+const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/shakharam|sakaram|sakhram/g,'sakharam').replace(/madhvi/g,'madhavi');
 const blob=d=>d._s||(d._s=norm(d.t+' '+d.d+' '+d.p+' '+(d.e||'')));
+
+const SYNS=[['chori','चोरी','chor','चोर','steal','stole','stolen','theft','thief','robber','kidnap'],['sakharam','scooter','scotter'],['missing','lost','gayab','गायब','vanish','disappear','लापता','kho gaya'],['shaadi','शादी','wedding','marriage','vivah','विवाह','engagement','sagai','सगाई'],['bhoot','भूत','ghost','bhootni','chudail','चुड़ैल','haunted'],['ladai','लड़ाई','fight','quarrel','jhagda','झगड़ा','argument','angry','gussa'],['ganpati','गणपति','ganesh','bappa'],['police','pandey','पुलिस','inspector','arrest'],['paisa','पैसा','money','cash','rupee','crore','loan'],['gaadi','गाड़ी','car','scooter','bike','vehicle'],['doctor','hathi','hospital','दवा','medicine','illness','sick'],['holi','होली'],['diwali','दिवाली','deepavali'],['navratri','नवरात्रि','garba','dandiya','durga'],['cricket','क्रिकेट','gpl','match','batting','bowling'],['dream','sapna','सपना'],['prank','joke','mazak','मज़ाक']];
+const SYNMAP={};SYNS.forEach(g=>{const n=g.map(norm);n.forEach(w=>{SYNMAP[w]=n})});
+const matchQ=(d,ws)=>ws.every(w=>(SYNMAP[w]||[w]).some(x=>blob(d).includes(x)));
+const arcOf=d=>d._a!==undefined?d._a:(d._a=(()=>{const p=d.t.split('|').map(x=>x.trim());if(p.length<3)return'';const l=p[p.length-1];return(!l||/taarak mehta|full movie|hindi comedy/i.test(l))?'':l})());
+const akey=d=>norm(arcOf(d)).replace(/[^a-z0-9\u0900-\u097f]+/g,' ').trim();
 function build(){
  const qs=norm(S.q).split(/\s+/).filter(Boolean);
- let a=DATA.filter(d=>d.k===S.kind&&(!S.year||d.p.startsWith(S.year))&&inLen(d.s,S.len)&&(!qs.length||qs.every(w=>blob(d).includes(w)))&&[...S.cs].every(i=>d.c.includes(i))&&[...S.ts].every(i=>d.h.includes(i))&&(!S.unseen||!store.watched[d.id]));
+ let a=DATA.filter(d=>d.k===S.kind&&(!S.year||d.p.startsWith(S.year))&&inLen(d.s,S.len)&&(!qs.length||matchQ(d,qs))&&(!S.arc||(d.k==='story'&&akey(d)===S.arc))&&[...S.cs].every(i=>d.c.includes(i))&&[...S.ts].every(i=>d.h.includes(i))&&(!S.unseen||!store.watched[d.id]));
  S.arcs=[];
  if(qs.length&&S.kind==='episode'&&!S.rng){const es=[...new Set(a.filter(d=>d.e&&!d.x).map(d=>d.e))].sort((x,y)=>x-y);let cl=[],c=[];for(const e of es){if(c.length&&e-c[c.length-1]>8){cl.push(c);c=[]}c.push(e)}if(c.length)cl.push(c);S.arcs=cl.filter(c=>c.length>=2).map(c=>({lo:c[0],hi:c[c.length-1],n:c.length})).sort((x,y)=>y.n-x.n).slice(0,5)}
  if(S.rng)a=a.filter(d=>d.e>=S.rng[0]&&d.e<=S.rng[1]);
@@ -110,14 +117,16 @@ function build(){
 }
 function card(d){
  const w=store.pos[d.id]?Math.min(100,store.pos[d.id]/d.s*100):0;
- return `<div class="card${store.watched[d.id]?' seen':''}${S.cur===d.id?' cur':''}" data-id="${d.id}"><div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${d.id}/mqdefault.jpg" alt=""><span class="d">${fmt(d.s)}</span>${w?`<div class="w" style="width:${w}%"></div>`:''}</div><div class="t"><div>${d.e?`<span class="ep">${d.x?'~':''}${d.e}</span>`:''}${esc(clean(d.t))}</div><div class="meta">${d.k==='story'&&arcName(d.t)?'📖 '+esc(arcName(d.t))+' · ':''}${d.p} · ${d.v.toLocaleString()} views · 👍 ${(d.q/10).toFixed(1)}%</div>${d.d?`<div class="pl">${esc(d.d)}</div>`:''}</div></div>`}
+ return `<div class="card${store.watched[d.id]?' seen':''}${S.cur===d.id?' cur':''}" data-id="${d.id}"><div class="thumb"><img loading="lazy" src="https://i.ytimg.com/vi/${d.id}/mqdefault.jpg" alt=""><span class="d">${fmt(d.s)}</span>${w?`<div class="w" style="width:${w}%"></div>`:''}</div><div class="t"><div>${d.e?`<span class="ep">${d.x?'~':''}${d.e}</span>`:''}${esc(clean(d.t))}</div><div class="meta">${d.k==='story'&&arcOf(d)?'📖 '+esc(arcOf(d))+' · ':''}${d.p} · ${d.v.toLocaleString()} views · 👍 ${(d.q/10).toFixed(1)}%</div>${d.d?`<div class="pl">${esc(d.d)}</div>`:''}</div></div>`}
 const clean=t=>{let s=t.split('|')[0].trim().replace(/\s*[-–]\s*Taarak Mehta Ka Oo?ltah Chash?mah.*$/i,'').replace(/^Taarak Mehta Ka Oo?ltah Chash?mah\s*[-–]\s*/i,'').replace(/\s*[-–]\s*(Full Episode|FE)\s*$/i,'');return s||t};
 const arcName=t=>{const p=t.split('|').map(x=>x.trim());const l=p[p.length-1];return /taarak mehta|full movie|hindi comedy/i.test(l)?'':l};
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const qs2g=()=>norm(S.q).split(/\s+/).filter(Boolean);
 function render(){
  build();S.shown=0;document.getElementById('grid').innerHTML='';more();
- const NAMES={episode:'Episodes',movie:'Full Movies',story:'Storylines'};const qs2=norm(S.q).split(/\s+/).filter(Boolean);const other=qs2.length?['episode','movie','story'].filter(k=>k!==S.kind).map(k=>[k,DATA.filter(d=>d.k===k&&qs2.every(w=>blob(d).includes(w))).length]).filter(x=>x[1]>0):[];
- document.getElementById('arcs').innerHTML=other.map(([k,n])=>`<span class="chip" data-tab="${k}">Also in ${NAMES[k]}: ${n}</span>`).join('')+(S.rng?`<span class="chip on" data-x="1">Storyline: episodes ${S.rng[0]}–${S.rng[1]} ✕</span>`:S.arcs.map(r=>`<span class="chip" data-lo="${r.lo}" data-hi="${r.hi}">📖 Whole storyline: episodes ${r.lo}–${r.hi} (${r.n} match your search)</span>`).join(''));
+ const rel=(()=>{if(S.arc||!qs2g().length)return[];const m=new Map();DATA.forEach(d=>{if(d.k!=='story'||!arcOf(d)||!matchQ(d,qs2g()))return;const k=akey(d);const e=m.get(k)||{k,label:arcOf(d),n:0};e.n++;m.set(k,e)});return[...m.values()].sort((a,b)=>b.n-a.n).slice(0,8)})();
+ const NAMES={episode:'Episodes',movie:'Full Movies',story:'Storylines'};const qs2=norm(S.q).split(/\s+/).filter(Boolean);const other=qs2.length?['episode','movie','story'].filter(k=>k!==S.kind).map(k=>[k,DATA.filter(d=>d.k===k&&matchQ(d,qs2)).length]).filter(x=>x[1]>0):[];
+ document.getElementById('arcs').innerHTML=other.map(([k,n])=>`<span class="chip" data-tab="${k}">Also in ${NAMES[k]}: ${n}</span>`).join('')+rel.map(r=>`<span class="chip" data-arc="${esc(r.k)}" data-label="${esc(r.label)}">📖 ${esc(r.label)} (${r.n})</span>`).join('')+(S.arc?`<span class="chip on" data-xa="1">Storyline: ${esc(S.arcLabel)} ✕</span>`:'')+(S.rng?`<span class="chip on" data-x="1">Storyline: episodes ${S.rng[0]}–${S.rng[1]} ✕</span>`:S.arcs.map(r=>`<span class="chip" data-lo="${r.lo}" data-hi="${r.hi}">📖 Whole storyline: episodes ${r.lo}–${r.hi} (${r.n} match your search)</span>`).join(''));
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.kind));
  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.mode));
  document.getElementById('algo').style.display=S.mode==='mix'?'':'none';
@@ -128,7 +137,8 @@ function more(){
  document.getElementById('more').style.display=S.shown<S.list.length?'':'none';
 }
 document.getElementById('more').onclick=more;
-document.getElementById('arcs').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;if(c.dataset.tab){S.kind=c.dataset.tab;S.rng=null}else if(c.dataset.x){S.rng=null}else{S.rng=[+c.dataset.lo-3,+c.dataset.hi+2];S.q='';document.getElementById('q').value='';S.mode='order'}render()};
+const chipClick=e=>{const c=e.target.closest('.chip');if(!c)return;if(c.dataset.arc){S.kind='story';S.arc=c.dataset.arc;S.arcLabel=c.dataset.label;S.rng=null;S.q='';document.getElementById('q').value='';S.mode='order'}else if(c.dataset.xa){S.arc='';S.arcLabel=''}else if(c.dataset.tab){S.kind=c.dataset.tab;S.rng=null}else if(c.dataset.x){S.rng=null}else{S.rng=[+c.dataset.lo-3,+c.dataset.hi+2];S.q='';document.getElementById('q').value='';S.mode='order'}render()};
+document.getElementById('arcs').onclick=chipClick;document.getElementById('palt').onclick=e=>{if(e.target.closest('.chip')){chipClick(e);window.scrollTo({top:0})}};
 document.getElementById('grid').onclick=e=>{const c=e.target.closest('.card');if(c)play(c.dataset.id)};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.kind=b.dataset.k;render()});
 document.getElementById('q').oninput=e=>{S.q=e.target.value;render()};
@@ -145,7 +155,7 @@ let P=null,ready=false,pending=null,tick=null;
 function play(id){
  const d=DATA.find(x=>x.id===id);S.cur=id;
  document.getElementById('main').classList.add('playing');
- document.getElementById('ptitle').textContent=d.t;document.getElementById('pplot').textContent=d.d||'';document.getElementById('palt').innerHTML=d.o?'Other uploads of this episode: '+d.o.map(a=>`<a style="color:#ffb020" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${a[0]}">${a[1]} · ${fmt(a[2])}</a>`).join(' · '):'';document.getElementById('pmeta').innerHTML='<a style="color:#ffb020" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v='+id+'">Open on YouTube</a> · '+d.p+' · '+fmt(d.s)+' · '+d.v.toLocaleString()+' views'+(d.e?' · Episode '+d.e:'');
+ document.getElementById('ptitle').textContent=d.t;document.getElementById('pplot').textContent=d.d||'';document.getElementById('palt').innerHTML=(d.k==='story'&&arcOf(d)?`<span class="chip" data-arc="${esc(akey(d))}" data-label="${esc(arcOf(d))}">📖 All of “${esc(arcOf(d))}” (${DATA.filter(x=>x.k==='story'&&akey(x)===akey(d)).length})</span> `:'')+(d.o?'Other uploads of this episode: '+d.o.map(a=>`<a style="color:#ffb020" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${a[0]}">${a[1]} · ${fmt(a[2])}</a>`).join(' · '):'');document.getElementById('pmeta').innerHTML='<a style="color:#ffb020" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v='+id+'">Open on YouTube</a> · '+d.p+' · '+fmt(d.s)+' · '+d.v.toLocaleString()+' views'+(d.e?' · Episode '+d.e:'');
  window.scrollTo({top:0,behavior:'smooth'});
  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('cur',c.dataset.id===id));
  if(!ready){pending=d;return}
