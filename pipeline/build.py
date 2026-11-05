@@ -22,12 +22,12 @@ NEW_CID_FROM = '2024-12-21'                              # CID Season 2 premiere
 
 HJ_RE = re.compile(r'hasya\s*jatra|hasyajatra|हास्यजत्रा|हास्य\s*जत्रा', re.I)
 CID_RE = re.compile(r'\bC\.?I\.?D\b|सीआईडी|सीआयडी', re.I)
-EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})\b', re.I)
+EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*[-–:#]?\s*(\d{1,4})\b', re.I)
 
 # What each person sees. Add more people / categories here.
 SHOWS = {
     'hasya': {'name': 'Full episodes', 'sub': 'Numbered episodes, 2018 onwards', 'icon': '😂', 'color': '#b45309', 'voice': 'mr-IN'},
-    'hasyamore': {'name': 'Comedy specials', 'sub': 'Compilations and new-season uploads', 'icon': '🎭', 'color': '#9a3412', 'voice': 'mr-IN'},
+    'hasyamore': {'name': 'Comedy specials', 'sub': 'Reruns, compilations and new-season clips', 'icon': '🎭', 'color': '#9a3412', 'voice': 'mr-IN'},
     'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#1d4ed8', 'voice': 'hi-IN'},
     'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#6d28d9', 'voice': 'hi-IN'},
     'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#475569', 'voice': 'hi-IN'},
