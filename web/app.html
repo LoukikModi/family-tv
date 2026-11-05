@@ -43,6 +43,7 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 .card .m{font-size:.8rem;color:var(--dim);margin-top:4px}
 .card.done{opacity:.62}
 .badge{position:absolute;top:10px;right:10px;background:var(--ok);color:#06210f;font-weight:800;font-size:.8rem;padding:6px 12px;border-radius:999px}
+.epb{position:absolute;top:8px;left:8px;background:#ffd400;color:#111;font-weight:800;font-size:.7rem;padding:3px 9px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .badge.yt{background:#fff;color:#111}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
 @media(min-width:620px){.grid{grid-template-columns:repeat(3,1fr)}}
@@ -94,6 +95,7 @@ const fdate=d=>d.split('-').reverse().join('-');
 const go=h=>{location.hash=h};
 const find=(key,id)=>SH[key]&&SH[key].items.find(i=>i[0]===id);
 function label(it){return it[1]}
+function cardTitle(it){return it[4]?(it[1].replace(/^Ep \d+( — )?/,'')||it[1]):it[1]}
 function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' '+T.mi:'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
 
 function markWatched(id){S.w[id]=1;delete S.p[id];save()}
@@ -205,8 +207,9 @@ function showPage(key){
         c.onclick=()=>{S.w[it[0]]=1;S.last={show:key,id:it[0]};save();setTimeout(draw,300)};}
       else{c=el('a','card'+(done?' done':''),null,{href:'#/p/'+key+'/'+it[0]})}
       const img=el('img');img.loading='lazy';img.src=thumb(it[0]);img.alt='';
-      const b=el('div','b');b.append(el('div','t',label(it)),el('div','m',meta(it)));
+      const b=el('div','b');b.append(el('div','t',cardTitle(it)),el('div','m',meta(it)));
       c.append(img,b);
+      if(it[4])c.append(el('div','epb','Ep '+it[4]));
       if(done)c.append(el('div','badge',T.done));else if(it[5])c.append(el('div','badge yt',T.yt));
       grid.append(c);
     });

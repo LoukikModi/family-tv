@@ -155,7 +155,7 @@ def collect(lib, wanted, source_playlists, title_re, upload_pages, playlist_page
     new = [v for v in found if v not in lib or 'e' not in lib[v]]
     for i in range(0, len(new), 50):
         chunk = new[i:i + 50]
-        d = api('videos', part='contentDetails,statistics,status', id=','.join(chunk))
+        d = api('videos', part='contentDetails,statistics,status,snippet', id=','.join(chunk))
         for v in d.get('items', []):
             title, pub, pl = found[v['id']]
             lib[v['id']] = {
@@ -163,6 +163,9 @@ def collect(lib, wanted, source_playlists, title_re, upload_pages, playlist_page
                 'v': int(v.get('statistics', {}).get('viewCount', 0)),
                 'e': 1 if v.get('status', {}).get('embeddable') else 0,
             }
+            dn = desc_ep(v.get('snippet', {}).get('description'))
+            if dn and not episode_no(title):
+                lib[v['id']]['n'] = dn
             if tag and pl == tag:
                 lib[v['id']]['pl'] = tag
             if kind:
@@ -171,8 +174,11 @@ def collect(lib, wanted, source_playlists, title_re, upload_pages, playlist_page
     known = [v for v in found if v in lib and v not in new]
     for i in range(0, len(known), 50):
         chunk = known[i:i + 50]
-        d = api('videos', part='statistics,status', id=','.join(chunk))
+        d = api('videos', part='statistics,status,snippet', id=','.join(chunk))
         for v in d.get('items', []):
+            dn = desc_ep(v.get('snippet', {}).get('description'))
+            if dn and not episode_no(lib[v['id']]['t']) and not lib[v['id']].get('n'):
+                lib[v['id']]['n'] = dn
             lib[v['id']]['v'] = int(v.get('statistics', {}).get('viewCount', 0))
             lib[v['id']]['e'] = 1 if v.get('status', {}).get('embeddable') else 0
             if tag and found[v['id']][2] == tag:
@@ -212,7 +218,83 @@ def fetch(lib, state, mode):
     print('candidates: hasya-ish %d, cid-ish %d, mummy-ish %d, library %d' % (n1, n2, n3, len(lib)))
 
 
+
+# ---------------------------------------------------------------- romanize (Devanagari / Gujarati -> Latin letters)
+_V = {'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'ऑ': 'o', 'ऍ': 'e'}
+_M = {'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ॉ': 'o', 'ॅ': 'e'}
+_C = {'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n', 'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+      'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n', 'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+      'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm', 'य': 'y', 'र': 'r', 'ल': 'l', 'ळ': 'l', 'व': 'v',
+      'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h', 'क़': 'q', 'ख़': 'kh', 'ग़': 'g', 'ज़': 'z', 'ड़': 'd', 'ढ़': 'dh', 'फ़': 'f'}
+_C.update({'\u0958': 'q', '\u0959': 'kh', '\u095A': 'g', '\u095B': 'z', '\u095C': 'd', '\u095D': 'dh', '\u095E': 'f', '\u095F': 'y'})
+_OTHER_DIGITS = {chr(0x966 + i): str(i) for i in range(10)}
+_NUQTA = {'क': 'q', 'ख': 'kh', 'ग': 'g', 'ज': 'z', 'ड': 'd', 'ढ': 'dh', 'फ': 'f'}
+_OTHER = {**_OTHER_DIGITS, 'ं': 'n', 'ँ': 'n', 'ः': 'h', 'ऽ': '', '।': '.', '॥': '.', '्': ''}
+_SCRIPT = re.compile('[\u0900-\u097F\u0A80-\u0AFF]+')
+
+
+def _rom_word(w, deep=False):
+    """w is one run of Devanagari. Returns Latin letters with Hindi/Marathi-style schwa deletion."""
+    syl = []          # (consonant_text, vowel_text, explicit)
+    i = 0
+    while i < len(w):
+        ch = w[i]
+        if ch in _V:
+            syl.append(('', _V[ch], True)); i += 1
+        elif ch in _C or ch in ('ऩ', 'ऱ', 'ऴ'):
+            c = _C.get(ch, 'n' if ch == 'ऩ' else 'r' if ch == 'ऱ' else 'l')
+            i += 1
+            if i < len(w) and w[i] == '़':
+                c = _NUQTA.get(ch, c); i += 1
+            if i < len(w) and w[i] in _M:
+                syl.append((c, _M[w[i]], True)); i += 1
+            elif i < len(w) and w[i] == '्':
+                syl.append((c, '', True)); i += 1          # conjunct: no vowel
+            else:
+                syl.append((c, 'a', False))                # inherent vowel
+        elif ch in _OTHER:
+            syl.append((_OTHER[ch], '', True)); i += 1
+        else:
+            syl.append((ch, '', True)); i += 1
+    out = []
+    n = len(syl)
+    for k, (c, v, explicit) in enumerate(syl):
+        if not explicit and v == 'a':
+            last = all(x[1] == '' for x in syl[k + 1:])
+            prev_explicit = k > 0 and syl[k - 1][2] and syl[k - 1][1] != ''
+            nxt = syl[k + 1] if k + 1 < n else None
+            nxt_explicit = nxt is not None and nxt[2] and nxt[1] != ''
+            prev_ok = prev_explicit or (deep and k > 0 and syl[k - 1][1] != '')
+            if last or (prev_ok and nxt_explicit and k > 0):
+                v = ''
+        out.append(c + v)
+    return ''.join(out)
+
+
+def roman(text):
+    def sub(m):
+        run = m.group(0)
+        deep = '\u0A80' <= run[0] <= '\u0AFF'          # Gujarati drops more inner a-sounds
+        if deep:
+            run = ''.join(chr(ord(ch) - 0x180) if '\u0A80' <= ch <= '\u0AFF' else ch for ch in run)
+        r = _rom_word(run, deep)
+        return r[:1].upper() + r[1:]
+    return _SCRIPT.sub(sub, text)
+
+
 # ---------------------------------------------------------------- classify
+
+DESC_EP = re.compile(r'\b(?:episode|ep)\.?\s*(?:no\.?|number|#)?\s*[:\-]?\s*(\d{1,4})\b', re.I)
+
+
+def desc_ep(desc):
+    m = DESC_EP.search((desc or '')[:600])
+    return int(m.group(1)) if m and 0 < int(m.group(1)) < 5000 else 0
+
+
+def rno(r):
+    return episode_no(r['t']) or r.get('n', 0)
+
 
 def episode_no(t):
     m = EP_RE.search(t)
@@ -236,17 +318,17 @@ DATE_RE = re.compile(r'^\d{1,2}(st|nd|rd|th)?\s+\w+,?\s+\d{4}$|^\d{1,2}\s+\w{3}\
 NOISE_RE = re.compile(r'^cid\s*\(.*\)(\s*season\s*\d+)?$|^season\s*\d+$|full episode|^cid$|^c\.i\.d$|सीआईडी$|सीआयडी$|sign up for sony liv|^new season$|^best comedy$|^thrilling cases$', re.I)
 
 
-def clean_title(t, show):
+def clean_title(t, show, extra=0):
     n = episode_no(t)
     if re.search(r'\s-\s', t) and n:
         segs = [x.strip() for x in re.split(r'\s+-\s+', t)]
         keep = [x for x in segs if x and not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)
                 and not DATE_RE.match(x) and not EP_RE.fullmatch(x)]
-        return ('Ep %d' % n) + (' — ' + ' — '.join(keep) if keep else '')
+        return ('Ep %d' % n) + (roman(' — ' + ' — '.join(keep)) if keep else '')
     parts = [x.strip() for x in re.split(r'\s*[|]\s*', t) if x.strip()]
     parts = [x for x in parts if not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)]
     head = parts[0] if parts else t
-    return head[:110]
+    return roman(head[:110])
 
 
 def dedupe(rows):
@@ -283,11 +365,11 @@ def clean_song(t):
     parts = [x.strip(' -|') for x in t.split('|')]
     parts = [x for x in parts if x and not SONG_NOISE.search(x)]
     if not parts:
-        return t[:100].strip()
+        return roman(t[:100].strip())
     head = parts[0]
     if len(parts) > 1 and len(parts[1]) < 40 and not re.search(r'bhajan|gujarati|song|geet|aarti|dhun|garba|new|latest|hd|ભજન', parts[1], re.I):
         head += ' — ' + parts[1]
-    return head[:110]
+    return roman(head[:110])
 
 
 def dedupe_songs(rows):
@@ -321,10 +403,10 @@ def select(lib):
             out[s] = [[r['id'], clean_song(r['t']), r['p'], round(r['s'] / 60), 0, 0, 0, r['v']] for r in rows]
             continue
         if s in ('cidold', 'cidclassic'):
-            rows.sort(key=lambda r: (episode_no(r['t']) == 0, episode_no(r['t']), r['p']))
+            rows.sort(key=lambda r: (rno(r) == 0, rno(r), r['p']))
         else:
-            rows.sort(key=lambda r: (r['p'], episode_no(r['t'])), reverse=True)
-        out[s] = [[r['id'], clean_title(r['t'], s), r['p'], round(r['s'] / 60), episode_no(r['t']),
+            rows.sort(key=lambda r: (r['p'], rno(r)), reverse=True)
+        out[s] = [[r['id'], clean_title(r['t'], s), r['p'], round(r['s'] / 60), rno(r),
                    0 if r['e'] else 1, 1 if r.get('pl') else 0, r['v']] for r in rows]
     return out
 
