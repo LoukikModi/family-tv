@@ -59,6 +59,9 @@ def summarize(hits):
     ok.sort(key=lambda h: h['p'])
     return {
         'matched': len(hits),
+        'not_embeddable': sum(1 for h in hits if not h.get('emb')),
+        'embeddable_but_short': sum(1 for h in hits if h.get('emb') and h.get('s', 0) < 1200),
+        'not_embeddable_20min_plus': sum(1 for h in hits if not h.get('emb') and h.get('s', 0) >= 1200),
         'embeddable_20min_plus': len(ok),
         'oldest': ok[0]['p'] if ok else None,
         'newest': ok[-1]['p'] if ok else None,
