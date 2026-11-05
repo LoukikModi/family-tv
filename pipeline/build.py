@@ -27,10 +27,11 @@ EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})\b', re.I)
 SHOWS = {
     'hasya': {'mr': 'महाराष्ट्राची हास्यजत्रा', 'en': 'Hasya Jatra', 'icon': '😂', 'color': '#e8a317'},
     'cidnew': {'mr': 'सीआयडी — नवीन', 'en': 'CID new episodes', 'icon': '🕵️', 'color': '#2f7fd1'},
-    'cidold': {'mr': 'सीआयडी — जुने', 'en': 'CID old episodes', 'icon': '📼', 'color': '#7b5ea7'},
+    'cidold': {'mr': 'सीआयडी — जुने', 'en': 'CID older episodes', 'icon': '🎞️', 'color': '#7b5ea7'},
+    'cidclassic': {'mr': 'सीआयडी — सर्वात जुने', 'en': 'CID classic 2013-2018 (opens in YouTube)', 'icon': '📼', 'color': '#5d6d7e'},
 }
 PROFILES = {
-    'dad': {'title': 'आपला टीव्ही', 'en': 'Our TV', 'shows': ['hasya', 'cidnew', 'cidold']},
+    'dad': {'title': 'आपला टीव्ही', 'en': 'Our TV', 'shows': ['hasya', 'cidnew', 'cidold', 'cidclassic']},
 }
 
 
@@ -161,32 +162,38 @@ def show_of(r):
             return None
         if r['p'] >= NEW_CID_FROM:
             return 'cidnew' if r['s'] >= 1500 else None
-        return 'cidold'
+        return 'cidold' if r['e'] else 'cidclassic'
     return None
+
+
+DATE_RE = re.compile(r'^\d{1,2}(st|nd|rd|th)?\s+\w+,?\s+\d{4}$|^\d{1,2}\s+\w{3}\s+\d{4}$', re.I)
+NOISE_RE = re.compile(r'full episode|^cid$|^c\.i\.d$|सीआईडी$|सीआयडी$|sign up for sony liv|^new season$|^best comedy$|^thrilling cases$', re.I)
 
 
 def clean_title(t, show):
     n = episode_no(t)
-    parts = [p.strip() for p in re.split(r'\s*[|]\s*', t) if p.strip()]
     if re.search(r'\s-\s', t) and n:
-        segs = [s.strip() for s in re.split(r'\s+-\s+', t)]
-        keep = [s for s in segs if not re.search(r'full episode|^cid$|सीआईडी$|hasyajatra|महाराष्ट्राची हास्यजत्रा|^\d{1,2} \w{3} \d{4}$', s, re.I)
-                and not EP_RE.fullmatch(s)]
+        segs = [x.strip() for x in re.split(r'\s+-\s+', t)]
+        keep = [x for x in segs if x and not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)
+                and not DATE_RE.match(x) and not EP_RE.fullmatch(x)]
         return ('भाग %d' % n) + (' — ' + ' — '.join(keep) if keep else '')
+    parts = [x.strip() for x in re.split(r'\s*[|]\s*', t) if x.strip()]
+    parts = [x for x in parts if not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)]
     head = parts[0] if parts else t
-    if CID_RE.fullmatch(head) and len(parts) > 1:
-        head = parts[1]
     return head[:110]
 
 
-def dedupe_new_cid(rows):
-    """Sony uploads the same CID episode twice (Hindi/English title). Keep the one with most views."""
+def dedupe(rows):
+    """Sony uploads many episodes twice (Hindi/Marathi and English title). Keep the one with most views."""
     rows = sorted(rows, key=lambda r: -r['v'])
-    kept = []
+    kept, by_day = [], {}
     for r in rows:
-        if any(abs(r['s'] - k['s']) <= 8 and abs(int(r['p'].replace('-', '')) - int(k['p'].replace('-', ''))) <= 1 for k in kept):
+        day = int(r['p'].replace('-', '')) if r['p'] else 0
+        near = [k for d in (day - 1, day, day + 1) for k in by_day.get(d, [])]
+        if any(abs(r['s'] - k['s']) <= 8 for k in near):
             continue
         kept.append(r)
+        by_day.setdefault(day, []).append(r)
     return kept
 
 
@@ -198,10 +205,11 @@ def select(lib):
         s = show_of(r)
         if s:
             groups[s].append(dict(r, id=vid))
-    groups['cidnew'] = dedupe_new_cid(groups['cidnew'])
+    for k in ('hasya', 'cidnew', 'cidold'):
+        groups[k] = dedupe(groups[k])
     out = {}
     for s, rows in groups.items():
-        if s == 'cidold':
+        if s in ('cidold', 'cidclassic'):
             rows.sort(key=lambda r: (episode_no(r['t']) == 0, episode_no(r['t']), r['p']))
         else:
             rows.sort(key=lambda r: (r['p'], episode_no(r['t'])), reverse=True)

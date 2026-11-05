@@ -121,7 +121,7 @@ function showPage(key){
   top.append(back,el('h1',null,s.mr));$app.append(top);
   const w=el('div','wrap');
   if(!s.items.length){w.append(el('div','empty',T.none));$app.append(w);return}
-  const bn=el('button','btn main',key==='cidold'?T.nextc:T.latest);
+  const bn=el('button','btn main',(key==='cidold'||key==='cidclassic')?T.nextc:T.latest);
   bn.onclick=()=>play(key,firstUnwatched(key));w.append(bn);
   const br=el('button','btn alt',T.rand);br.onclick=()=>play(key,randomUnwatched(key));w.append(br);
   if(s.items.every(i=>i[5]))w.append(el('div','note',T.oldnote));
