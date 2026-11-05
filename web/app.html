@@ -71,6 +71,15 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 .note{background:#fff3c4;border-radius:14px;padding:12px 14px;font-size:.8rem;color:#5b4a00;margin:8px 0}
 #pv{position:relative;width:min(100%,960px,calc(72vh*16/9));aspect-ratio:16/9;background:#000;margin:0 auto}
 #pv iframe{position:absolute;inset:0;width:100%;height:100%}
+#pv:fullscreen{width:100%;height:100%;max-width:none;aspect-ratio:auto}
+#pv:-webkit-full-screen{width:100%;height:100%;max-width:none;aspect-ratio:auto}
+.upn{font-size:.8rem;color:var(--dim);padding:0 14px;max-width:960px;margin:0 auto 6px}
+.cd{background:#16181d;color:#fff;border-radius:16px;padding:14px;margin:10px 0;text-align:center;font-weight:700;font-size:.9rem}
+.cd .btn{min-height:56px;margin:8px 0 0}
+.yrs{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 6px;padding:2px 16px 6px;scrollbar-width:none}
+.yrs::-webkit-scrollbar{display:none}
+.hint{background:#fff;border:2px solid #b9b3a2;border-radius:16px;padding:12px 16px;margin-top:20px;font-size:.8rem}
+.hint b{display:block;font-size:.9rem;margin-bottom:4px}
 .ptitle{font-size:1rem;font-weight:700;margin:12px auto 4px;padding:0 14px;max-width:960px}
 .err{background:#fde2e0;color:#7a1b13;border-radius:14px;padding:14px;margin:10px 0;font-weight:700}
 .size{display:flex;align-items:center;gap:8px;margin-top:26px;color:var(--dim);font-size:.8rem}
@@ -91,9 +100,11 @@ const KEY='tv:'+D.profile;
 const T0={back:'← Back',cont:'▶ Continue watching',nextc:'▶ Start',rand:'🎲 Surprise me',more:'Show more ▼',
  done:'✔ Watched',yt:'Opens in YouTube ↗',prev:'⏮ Previous',next:'⏭ Next',list:'☰ List',
  fail:"This video can't play here.",open:'Open in YouTube ↗',size:'Text size',none:'Nothing found',
- oldnote:'These open in YouTube.',parts:'videos',mi:'min',s_new:'Newest',s_old:'Oldest',s_pop:'Most viewed',s_num:'Episode no.',unw:'Unwatched',search:'🔍 Search…',
+ oldnote:'These open in YouTube.',parts:'videos',mi:'min',s_new:'Newest',s_old:'Oldest',s_pop:'Most viewed',s_num:'Episode no.',unw:'Unwatched',search:'🔍 Title or Ep no.',
  filt:'⚙ Sort & search ▾',filt2:'⚙ Sort & search ▴',back10:'⏪ 10s',fwd30:'30s ⏩',pause:'⏸ Pause',play:'▶ Play',
  shuf:'🔀 Play all, shuffled',fav0:'♡ Save to favourites',fav1:'♥ Saved to favourites',favs:'♥ Favourites',favsub:'Videos you saved',sleep:'😴 Sleep timer: ',off:'off',sleepdone:'Sleep timer finished. Good night!',
+ full:'⛶ Full screen',upn:'Up next: ',nextin:'Next video in ',cancel:'✕ Stay here',playnow:'▶ Play now',skipin:'This video can’t play here. Skipping to the next in ',allyrs:'All years',ytapp:'↗ Open in YouTube app',
+ inst:'Add to your home screen',inst_a:'Tap the ⋮ menu (top right), then “Add to Home screen” or “Install app”.',inst_i:'Tap the Share button, then “Add to Home Screen”.',inst_b:'Install now',gotit:'Got it',
  tv:'📺 Watch on TV',tv1:'Smart TV: open this website in the TV’s own web browser.',tv2:'Phone with Chrome: tap the ⋮ menu, then Cast…, and pick your TV.',tv3:'Or plug the phone into the TV with an HDMI cable (Android) or Lightning/USB-C adapter (iPhone).'};
 const T=Object.assign({},T0,D.T||{});
 let S;
@@ -160,6 +171,15 @@ function home(){
   z.append(m,p);w.append(z);
   const tip=el('details','tip');tip.append(el('summary',null,T.tv),el('p',null,T.tv1),el('p',null,T.tv2),el('p',null,T.tv3));
   w.append(tip);
+  const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+  if(!standalone&&!S.nohint){
+    const h=el('div','hint');h.append(el('b',null,T.inst));
+    const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+    h.append(el('div',null,ios?T.inst_i:T.inst_a));
+    if(!ios&&window.__inst){const ib=el('button','btn main',T.inst_b);ib.onclick=()=>{window.__inst.prompt();window.__inst=null;ib.remove()};h.append(ib)}
+    const gb=el('button','btn',T.gotit);gb.onclick=()=>{S.nohint=1;save();h.remove()};h.append(gb);
+    w.append(h);
+  }
   if(D.built)w.append(el('div','count','Updated '+D.built+' · '+D.shows.reduce((a,s)=>a+s.items.length,0)+' videos'));
   $app.append(w);
   window.scrollTo(0,0);
@@ -187,6 +207,7 @@ window.addEventListener('scroll',()=>{if(curKey){(MEM[curKey]=MEM[curKey]||{}).y
 function sorted(s,o){
   let a=s.items.slice();
   if(o.u)a=a.filter(i=>!S.w[i[0]]);
+  if(o.y)a=a.filter(i=>i[2].slice(0,4)===o.y);
   if(o.q){const q=o.q.toLowerCase();a=a.filter(i=>i[1].toLowerCase().includes(q)||String(i[4])===q)}
   if(o.s==='new')a.sort((x,y)=>x[2]<y[2]?1:x[2]>y[2]?-1:y[4]-x[4]);
   else if(o.s==='old')a.sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);
@@ -203,7 +224,7 @@ function showPage(key){
   const hasNum=s.items.filter(i=>i[4]).length>s.items.length*0.2;
   const o=S.o[key]||(S.o[key]={s:s.sort||(hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new'),u:0});
   if(!['new','old','pop'].includes(o.s)||(o.s==='pop'&&D.profile!=='mummy'&&key!=='fav'))o.s='new';
-  o.q='';
+  o.q='';if(!back_)o.y='';
   const top=el('div','top');
   const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go(PARENT[key]?'#/g/'+PARENT[key].group:'#/');
   top.append(back,el('h1',null,s.name));$app.append(top);
@@ -232,6 +253,13 @@ function showPage(key){
     pills.append(b);
   });
   o.u=0;panel.append(pills);
+  const yrset=[...new Set(s.items.map(i=>i[2].slice(0,4)))].sort().reverse();
+  if(yrset.length>1&&s.items.length>60){
+    const yr=el('div','yrs');
+    const mk=(y,lab)=>{const b=el('button','pill'+((o.y||'')===y?' on':''),lab);b.dataset.y=y;
+      b.onclick=()=>{o.y=y;shown=20;[...yr.children].forEach(c=>c.classList.toggle('on',c.dataset.y===y));draw()};yr.append(b)};
+    mk('',T.allyrs);yrset.forEach(y=>mk(y,y));panel.append(yr);
+  }
   const srow=el('div','srow');
   const q=el('input','search',null,{type:'search',placeholder:T.search,autocomplete:'off'});
   q.oninput=()=>{o.q=q.value.trim();shown=20;draw()};srow.append(q);
@@ -309,6 +337,17 @@ function playerPage(key,id){
   $app.replaceChildren();
   const pv=el('div');pv.id='pv';pv.append(el('div',null,null,{id:'yt'}));$app.append(pv);
   $app.append(el('div','ptitle',it[4]&&!/^Ep \d+$/.test(it[1])?'Ep '+it[4]+' — '+cardTitle(it):it[1]));
+  const prev=neighbor(key,id,-1),next=neighbor(key,id,1);
+  if(next)$app.append(el('div','upn',T.upn+(next[4]?'Ep '+next[4]+' — ':'')+cardTitle(next)));
+  let cdT=null;
+  const stopCd=()=>{clearInterval(cdT);cdT=null;const c=document.querySelector('.cd');if(c)c.remove()};
+  const countdown=(label,secs,action)=>{
+    stopCd();const box=el('div','cd');const msg=el('div');box.append(msg);
+    const go1=el('button','btn main',T.playnow);go1.onclick=()=>{stopCd();action()};
+    const no=el('button','btn',T.cancel);no.onclick=stopCd;box.append(go1,no);w.prepend(box);
+    let n=secs;const upd=()=>{msg.textContent=label+n+'…'};upd();
+    cdT=setInterval(()=>{n--;if(n<=0){stopCd();action()}else upd()},1000);
+  };
   const w=el('div','wrap');
   const err=el('div','err',T.fail);err.style.display='none';
   const eb=el('a','btn alt',T.open,{href:ytUrl(it),target:'_blank',rel:'noopener'});eb.style.display='none';eb.onclick=()=>markWatched(id);
@@ -322,7 +361,11 @@ function playerPage(key,id){
   bf.onclick=()=>{try{P.seekTo(P.getCurrentTime()+30,true)}catch(e){}};
   bpp.onclick=()=>{try{(P.getPlayerState()===1)?P.pauseVideo():P.playVideo()}catch(e){}};
   bpp.style.flex='1.6';rc.append(bb,bpp,bf);w.append(rc);
-  const prev=neighbor(key,id,-1),next=neighbor(key,id,1);
+  if(pv.requestFullscreen||pv.webkitRequestFullscreen){
+    const fs=el('button','btn',T.full);
+    fs.onclick=()=>{try{(pv.requestFullscreen||pv.webkitRequestFullscreen).call(pv)}catch(e){}};
+    w.append(fs);
+  }
   const row=el('div','row');
   const bp=el('button','btn sm',T.prev);bp.disabled=!prev;bp.onclick=()=>prev&&go('#/p/'+key+'/'+prev[0]);
   const bn=el('button','btn sm main',T.next);bn.disabled=!next;bn.onclick=()=>next&&go('#/p/'+key+'/'+next[0]);
@@ -330,7 +373,7 @@ function playerPage(key,id){
   const more=el('details','tip');more.append(el('summary',null,'⋯ More'));
   const fb=el('button','btn',S.fav[id]?T.fav1:T.fav0);
   fb.onclick=()=>{if(S.fav[id])delete S.fav[id];else S.fav[id]=1;save();fb.textContent=S.fav[id]?T.fav1:T.fav0;refreshFav()};
-  if(D.profile==='mummy')more.append(fb);
+  if(D.profile==='mummy'){more.append(fb);more.append(el('a','btn',T.ytapp,{href:ytUrl(it),target:'_blank',rel:'noopener'}))}
   const sb=el('button','btn');
   const slab=()=>T.sleep+(sleepAt>Date.now()?SLEEPS[sleepIdx]+' min':T.off);
   sb.textContent=slab();
@@ -348,9 +391,9 @@ function playerPage(key,id){
         onStateChange:e=>{
           if(e.data===1){playing=true;bpp.textContent=T.pause;wake(true);clearInterval(tick);tick=setInterval(savePos,5000)}
           else if(e.data===2){playing=false;bpp.textContent=T.play;savePos()}
-          else if(e.data===0){markWatched(id);clearInterval(tick);if(next)go('#/p/'+key+'/'+next[0]);else go('#/s/'+key)}
+          else if(e.data===0){markWatched(id);clearInterval(tick);if(next)countdown(T.nextin,5,()=>go('#/p/'+key+'/'+next[0]));else go('#/s/'+key)}
         },
-        onError:()=>{err.style.display='block';eb.style.display='flex'}
+        onError:()=>{err.style.display='block';eb.style.display='flex';if(next)countdown(T.skipin,8,()=>go('#/p/'+key+'/'+next[0]))}
       }});
     P.__id=id;P.__key=key;
   };
@@ -367,6 +410,7 @@ function render(){
   else home();
   prevHash=nowHash;
 }
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__inst=e});
 window.addEventListener('hashchange',render);
 window.addEventListener('pagehide',()=>{try{savePos()}catch(e){}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){try{savePos()}catch(e){}}else if(playing)wake(true)});
