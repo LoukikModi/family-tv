@@ -466,7 +466,7 @@ def write_site(shows):
         keys = []
         for t in prof['tiles']:
             keys += t.get('children') or [t['show']]
-        data = {'profile': pid, 'title': prof['title'], 'cidPlaylist': CID_PLAYLIST, 'tiles': prof['tiles'],
+        data = {'built': time.strftime('%d %b %Y', time.gmtime()), 'profile': pid, 'title': prof['title'], 'cidPlaylist': CID_PLAYLIST, 'tiles': prof['tiles'],
                 'shows': [dict(SHOWS[k], key=k, items=shows[k]) for k in keys]}
         html = tpl.replace('/*DATA*/null', json.dumps(data, ensure_ascii=False, separators=(',', ':')))
         html = html.replace('__TITLE__', prof['title'])

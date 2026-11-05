@@ -149,7 +149,7 @@ function home(){
     b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+n+' '+T.parts));
     b.onclick=()=>go(g?'#/g/'+g.group:'#/s/'+s.key);tg.append(b);
   });
-  if(D.profile==='mummy'||SH.fav.items.length){
+  if(D.profile==='mummy'){
     const s=SH.fav;const b=el('button','tile');b.style.background=s.color;b.style.marginTop='10px';
     b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+s.items.length+' '+T.parts));
     b.onclick=()=>go('#/s/fav');w.append(b);
@@ -159,7 +159,9 @@ function home(){
   const p=el('button','btn','A+');p.onclick=()=>{S.z=Math.min(3,S.z+1);save();applySize()};
   z.append(m,p);w.append(z);
   const tip=el('details','tip');tip.append(el('summary',null,T.tv),el('p',null,T.tv1),el('p',null,T.tv2),el('p',null,T.tv3));
-  w.append(tip);$app.append(w);
+  w.append(tip);
+  if(D.built)w.append(el('div','count','Updated '+D.built+' · '+D.shows.reduce((a,s)=>a+s.items.length,0)+' videos'));
+  $app.append(w);
   window.scrollTo(0,0);
 }
 
@@ -200,19 +202,18 @@ function showPage(key){
   S.o=S.o||{};
   const hasNum=s.items.filter(i=>i[4]).length>s.items.length*0.2;
   const o=S.o[key]||(S.o[key]={s:s.sort||(hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new'),u:0});
-  if(o.s==='num'&&!hasNum)o.s='new';
+  if(!['new','old','pop'].includes(o.s)||(o.s==='pop'&&D.profile!=='mummy'&&key!=='fav'))o.s='new';
   o.q='';
   const top=el('div','top');
   const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go(PARENT[key]?'#/g/'+PARENT[key].group:'#/');
   top.append(back,el('h1',null,s.name));$app.append(top);
   const w=el('div','wrap');
   if(!s.items.length){w.append(el('div','empty',T.none));$app.append(w);return}
-  const act=el('div','row');
-  const bn=el('button','btn sm main',T.nextc);
-  bn.onclick=()=>{const l=VIEW[key]||s.items;play(key,l.find(i=>!S.w[i[0]])||l[0])};
-  const br=el('button','btn sm alt',T.rand);
-  br.onclick=()=>{const l=VIEW[key]||s.items;const u=l.filter(i=>!S.w[i[0]]);const a=u.length?u:l;play(key,a[Math.floor(Math.random()*a.length)])};
-  act.append(bn,br);w.append(act);
+  const nextUp=()=>{const l=[...s.items].sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);return l.find(i=>!S.w[i[0]]&&!i[5])||l.find(i=>!i[5])||l[0]};
+  const nu=nextUp();
+  const bn=el('button','btn main',(S.w[s.items[0][0]]||Object.keys(S.w).some(k=>s.items.some(i=>i[0]===k))?'▶ Continue':'▶ Start')+(nu&&nu[4]?' · Ep '+nu[4]:''));
+  bn.onclick=()=>{VIEW[key]=[...s.items].filter(i=>!i[5]||s.items.every(j=>j[5])).sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);play(key,nu)};
+  w.append(bn);
   if(D.profile==='mummy'||key==='fav'){
     const sh=el('button','btn',T.shuf);
     sh.onclick=()=>{const l=sorted(s,o).filter(i=>!i[5]);if(!l.length)return;
@@ -225,14 +226,12 @@ function showPage(key){
   /* sort & search live behind one button so the list stays clean */
   const panel=el('div','ctrl');w.append(panel);
   const pills=el('div','pills');
-  SORTS.filter(x=>x[0]!=='num'||hasNum).forEach(([k,n])=>{
+  SORTS.filter(x=>x[0]==='new'||x[0]==='old'||(x[0]==='pop'&&(D.profile==='mummy'||key==='fav'))).forEach(([k,n])=>{
     const b=el('button','pill'+(o.s===k?' on':''),n);b.dataset.k=k;
     b.onclick=()=>{o.s=k;save();shown=20;[...pills.querySelectorAll('[data-k]')].forEach(c=>c.classList.toggle('on',c.dataset.k===o.s));draw()};
     pills.append(b);
   });
-  const ub=el('button','pill'+(o.u?' on':''),T.unw);
-  ub.onclick=()=>{o.u=o.u?0:1;save();shown=20;ub.classList.toggle('on',!!o.u);draw()};
-  pills.append(ub);panel.append(pills);
+  o.u=0;panel.append(pills);
   const srow=el('div','srow');
   const q=el('input','search',null,{type:'search',placeholder:T.search,autocomplete:'off'});
   q.oninput=()=>{o.q=q.value.trim();shown=20;draw()};srow.append(q);
@@ -272,7 +271,7 @@ function showPage(key){
       c.append(th,b);
       if(it[4])c.append(el('div','epb','Ep '+it[4]));
       if(S.fav[it[0]])c.append(el('div','fv','♥'));
-      if(done)c.append(el('div','badge',T.done));else if(it[5])c.append(el('div','badge yt',T.yt));
+      if(done)c.append(el('div','badge',T.done));
       grid.append(c);
     });
     more.style.display=shown<list.length?'flex':'none';
@@ -328,15 +327,16 @@ function playerPage(key,id){
   const bp=el('button','btn sm',T.prev);bp.disabled=!prev;bp.onclick=()=>prev&&go('#/p/'+key+'/'+prev[0]);
   const bn=el('button','btn sm main',T.next);bn.disabled=!next;bn.onclick=()=>next&&go('#/p/'+key+'/'+next[0]);
   row.append(bp,bn);w.append(row);
+  const more=el('details','tip');more.append(el('summary',null,'⋯ More'));
   const fb=el('button','btn',S.fav[id]?T.fav1:T.fav0);
   fb.onclick=()=>{if(S.fav[id])delete S.fav[id];else S.fav[id]=1;save();fb.textContent=S.fav[id]?T.fav1:T.fav0;refreshFav()};
-  w.append(fb);
+  if(D.profile==='mummy')more.append(fb);
   const sb=el('button','btn');
   const slab=()=>T.sleep+(sleepAt>Date.now()?SLEEPS[sleepIdx]+' min':T.off);
   sb.textContent=slab();
   sb.onclick=()=>{sleepIdx=(sleepIdx+1)%SLEEPS.length;sleepAt=SLEEPS[sleepIdx]?Date.now()+SLEEPS[sleepIdx]*60000:0;sb.textContent=slab()};
-  w.append(sb);
-  const bl=el('button','btn',T.list);bl.onclick=()=>go('#/s/'+key);w.append(bl);
+  more.append(sb);
+  const bl=el('button','btn',T.list);bl.onclick=()=>go('#/s/'+key);w.append(bl);w.append(more);
   $app.append(w);window.scrollTo(0,0);
   S.last={show:key,id:id};save();
   const start=()=>{
