@@ -2,19 +2,16 @@ name: Update site
 
 on:
   schedule:
-    # TMKOC episodes go live at 21:00 IST (15:30 UTC), Monday to Saturday.
-    - cron: '25,30,35,40,45,50,55 15 * * 1-6'   # 20:55-21:25 IST, every 5 min
-    - cron: '*/5 16 * * 1-6'                    # 21:30-22:25 IST, every 5 min
-    - cron: '0 17 * * 1-6'                      # 22:30 IST
-    - cron: '10 * * * *'                        # every hour, catches odd uploads
-    - cron: '30 2 * * 0'                        # Sunday: full refresh of views/likes
+    # GitHub treats schedules as best-effort, so these may run late.
+    - cron: '17 */3 * * *'                      # every 3 hours: newest uploads
+    - cron: '40 1 * * *'                        # daily: deep scan of channels and playlists
   push:
     branches: [main]
-    paths: ['web/**', 'pipeline/**', 'data/**', '.github/workflows/update.yml']
+    paths: ['web/**', 'pipeline/**', '.github/workflows/update.yml']
   workflow_dispatch:
     inputs:
       mode:
-        description: quick = new uploads only, full = also refresh views/likes
+        description: quick = newest uploads only, full = deep scan
         type: choice
         options: [full, quick]
         default: full
@@ -25,7 +22,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: tmkoc-update
+  group: family-tv-update
   cancel-in-progress: false
 
 jobs:
@@ -38,16 +35,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: pip install pillow
       - id: upd
         env:
           YT_KEY: ${{ secrets.YT_API_KEY }}
-          MODE: ${{ github.event.inputs.mode || ((github.event_name == 'push' || github.event.schedule == '30 2 * * 0') && 'full') || 'quick' }}
-        run: python pipeline/update.py "$MODE"
+          MODE: ${{ github.event.inputs.mode || ((github.event_name == 'push' || github.event.schedule == '40 1 * * *') && 'full') || 'quick' }}
+        run: python pipeline/build.py "$MODE"
       - name: Commit updated data
         if: steps.upd.outputs.changed == 'true'
         run: |
-          git config user.name "tmkoc-bot"
-          git config user.email "tmkoc-bot@users.noreply.github.com"
+          git config user.name "family-tv-bot"
+          git config user.email "bot@users.noreply.github.com"
           git add data
           if ! git diff --cached --quiet; then
             git commit -m "Update data"
