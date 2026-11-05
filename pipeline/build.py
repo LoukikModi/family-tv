@@ -26,26 +26,26 @@ EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})\b', re.I)
 
 # What each person sees. Add more people / categories here.
 SHOWS = {
-    'hasya': {'name': 'Hasya Jatra', 'sub': 'Maharashtrachi HasyaJatra', 'icon': '😂', 'color': '#e8a317'},
-    'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#2f7fd1'},
-    'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#7b5ea7'},
-    'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#5d6d7e'},
+    'hasya': {'name': 'Hasya Jatra', 'sub': 'Maharashtrachi HasyaJatra', 'icon': '😂', 'color': '#b45309', 'voice': 'mr-IN'},
+    'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#1d4ed8', 'voice': 'hi-IN'},
+    'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#6d28d9', 'voice': 'hi-IN'},
+    'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#475569', 'voice': 'hi-IN'},
     # Mummy: Gujarati devotional and wedding songs
-    'bhajan': {'name': 'Bhajan', 'sub': 'Devotional songs', 'icon': '🙏', 'color': '#d9822b', 'sort': 'pop'},
-    'prabhatiya': {'name': 'Prabhatiya', 'sub': 'Morning songs', 'icon': '🌅', 'color': '#c0587a', 'sort': 'pop'},
-    'aarti': {'name': 'Aarti & Chalisa', 'sub': 'Prayers', 'icon': '🪔', 'color': '#b8860b', 'sort': 'pop'},
-    'lagna': {'name': 'Lagna Geet', 'sub': 'Wedding songs', 'icon': '💍', 'color': '#c0392b', 'sort': 'pop'},
-    'dhun': {'name': 'Dhun & Kirtan', 'sub': 'Chanting', 'icon': '🕉️', 'color': '#2e8b57', 'sort': 'pop'},
-    'dayro': {'name': 'Dayro & Santvani', 'sub': 'Folk bhajans', 'icon': '🎤', 'color': '#2f7fd1', 'sort': 'pop'},
-    'garba': {'name': 'Garba', 'sub': 'Navratri songs', 'icon': '💃', 'color': '#8e44ad', 'sort': 'pop'},
+    'bhajan': {'name': 'Bhajan', 'sub': 'Devotional songs', 'icon': '🙏', 'color': '#b45309', 'sort': 'pop', 'voice': 'gu-IN'},
+    'prabhatiya': {'name': 'Prabhatiya', 'sub': 'Morning songs', 'icon': '🌅', 'color': '#be185d', 'sort': 'pop', 'voice': 'gu-IN'},
+    'aarti': {'name': 'Aarti & Chalisa', 'sub': 'Prayers', 'icon': '🪔', 'color': '#92400e', 'sort': 'pop', 'voice': 'gu-IN'},
+    'lagna': {'name': 'Lagna Geet', 'sub': 'Wedding songs', 'icon': '💍', 'color': '#b91c1c', 'sort': 'pop', 'voice': 'gu-IN'},
+    'dhun': {'name': 'Dhun & Kirtan', 'sub': 'Chanting', 'icon': '🕉️', 'color': '#15803d', 'sort': 'pop', 'voice': 'gu-IN'},
+    'dayro': {'name': 'Dayro & Santvani', 'sub': 'Folk bhajans', 'icon': '🎤', 'color': '#1d4ed8', 'sort': 'pop', 'voice': 'gu-IN'},
+    'garba': {'name': 'Garba', 'sub': 'Navratri songs', 'icon': '💃', 'color': '#7e22ce', 'sort': 'pop', 'voice': 'gu-IN'},
 }
 # Home screen tiles per person. A group opens a screen with its own big choices.
 PROFILES = {
-    'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'label': '👨 Pappa', 'color': '#2f7fd1',
+    'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'label': '👨 Pappa', 'color': '#1d4ed8',
               'tiles': [{'show': 'hasya'},
                         {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
                          'children': ['cidnew', 'cidold', 'cidclassic']}]},
-    'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'label': '👩 Mummy', 'color': '#e67e22',
+    'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'label': '👩 Mummy', 'color': '#c2410c',
               'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba')]},
 }
 
@@ -431,7 +431,7 @@ def make_icons(folder, color):
 
 def write_manifest(folder, name, color):
     json.dump({'name': name, 'short_name': name, 'start_url': './', 'scope': './', 'display': 'standalone',
-               'orientation': 'portrait', 'background_color': '#101418', 'theme_color': '#101418',
+               'orientation': 'portrait', 'background_color': '#f6f3ec', 'theme_color': '#f6f3ec',
                'icons': [{'src': 'icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
                          {'src': 'icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'}]},
               open(os.path.join(folder, 'manifest.webmanifest'), 'w'), ensure_ascii=False)
@@ -439,10 +439,10 @@ def write_manifest(folder, name, color):
 
 
 HOME = """<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101418">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f3ec">
 <title>Family TV</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
 <style>
-body{margin:0;background:#101418;color:#fff;font:22px system-ui,-apple-system,"Noto Sans Devanagari","Noto Sans Gujarati",sans-serif;padding:18px}
+body{margin:0;background:#f6f3ec;color:#16181d;font:22px system-ui,-apple-system,"Noto Sans Devanagari","Noto Sans Gujarati",sans-serif;padding:18px}
 h1{font-size:1.3rem;margin:6px 4px 14px}
 a{display:flex;flex-direction:column;justify-content:center;min-height:38vh;margin:14px 0;padding:22px;border-radius:26px;color:#fff;text-decoration:none;font-weight:800;font-size:2rem}
 a small{font-size:1rem;font-weight:600;opacity:.92}
