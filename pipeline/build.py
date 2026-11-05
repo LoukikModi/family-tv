@@ -28,7 +28,7 @@ EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*[-–:#]?\s*(\d{1,4})\b', re.I)
 SHOWS = {
     'hasya': {'name': 'Full episodes', 'sub': 'Numbered episodes, 2018 onwards', 'icon': '😂', 'color': '#b45309', 'voice': 'mr-IN'},
     'hasyamore': {'name': 'Comedy specials', 'sub': 'Reruns, compilations and new-season clips', 'icon': '🎭', 'color': '#9a3412', 'voice': 'mr-IN'},
-    'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#1d4ed8', 'voice': 'hi-IN'},
+    'cidnew': {'name': 'Newest episodes', 'sub': 'Newest, Dec 2024 onwards (incl. Season 2)', 'icon': '🕵️', 'color': '#1d4ed8', 'voice': 'hi-IN'},
     'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#6d28d9', 'voice': 'hi-IN'},
     'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#475569', 'voice': 'hi-IN'},
     # Mummy: Gujarati devotional and wedding songs
@@ -46,7 +46,7 @@ PROFILES = {
               'tiles': [{'group': 'hasya', 'name': 'Hasya Jatra', 'sub': 'Marathi comedy', 'icon': '😂', 'color': '#b45309',
                          'children': ['hasya', 'hasyamore']},
                         {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
-                         'children': ['cidnew', 'cidold', 'cidclassic']}]},
+                         'children': ['cidclassic', 'cidold', 'cidnew']}]},
     'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'emoji': ['🙏', '🪔', '💍', '🌅'], 'label': '👩 Mummy', 'color': '#c2410c',
               'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba')]},
 }

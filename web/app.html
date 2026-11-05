@@ -123,6 +123,7 @@ const ytUrl=(it)=>'https://www.youtube.com/watch?v='+it[0]+(it[6]?'&list='+D.cid
 const go=h=>{location.hash=h};
 const find=(key,id)=>SH[key]&&SH[key].items.find(i=>i[0]===id);
 function label(it){return it[1]}
+const epl=it=>(/season\s*2/i.test(it[1])?'S2 Ep ':'Ep ')+it[4];
 function cardTitle(it){return it[4]?(it[1].replace(/^Ep \d+( — )?/,'')||it[1]):it[1]}
 function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' '+T.mi:'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
 function frac(it){if(S.w[it[0]])return 1;const p=S.p[it[0]];return p&&it[3]?Math.min(.97,p/(it[3]*60)):0}
@@ -232,7 +233,7 @@ function showPage(key){
   if(!s.items.length){w.append(el('div','empty',T.none));$app.append(w);return}
   const nextUp=()=>{const l=[...s.items].sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);return l.find(i=>!S.w[i[0]]&&!i[5])||l.find(i=>!i[5])||l[0]};
   const nu=nextUp();
-  const bn=el('button','btn main',(S.w[s.items[0][0]]||Object.keys(S.w).some(k=>s.items.some(i=>i[0]===k))?'▶ Continue':'▶ Start')+(nu&&nu[4]?' · Ep '+nu[4]:''));
+  const bn=el('button','btn main',(S.w[s.items[0][0]]||Object.keys(S.w).some(k=>s.items.some(i=>i[0]===k))?'▶ Continue':'▶ Start')+(nu&&nu[4]?' · '+epl(nu):''));
   bn.onclick=()=>{VIEW[key]=[...s.items].filter(i=>!i[5]||s.items.every(j=>j[5])).sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);play(key,nu)};
   w.append(bn);
   if(D.profile==='mummy'||key==='fav'){
@@ -297,7 +298,7 @@ function showPage(key){
       if(f>0&&!it[5]){const pg=el('div','pg');const bar=el('i');bar.style.width=Math.round(f*100)+'%';pg.append(bar);th.append(pg)}
       const b=el('div','b');b.append(el('div','t',cardTitle(it)),el('div','m',meta(it)));
       c.append(th,b);
-      if(it[4])c.append(el('div','epb','Ep '+it[4]));
+      if(it[4])c.append(el('div','epb',epl(it)));
       if(S.fav[it[0]])c.append(el('div','fv','♥'));
       if(done)c.append(el('div','badge',T.done));
       grid.append(c);
@@ -336,9 +337,9 @@ function playerPage(key,id){
   const it=find(key,id);if(!it){go('#/');return}
   $app.replaceChildren();
   const pv=el('div');pv.id='pv';pv.append(el('div',null,null,{id:'yt'}));$app.append(pv);
-  $app.append(el('div','ptitle',it[4]&&!/^Ep \d+$/.test(it[1])?'Ep '+it[4]+' — '+cardTitle(it):it[1]));
+  $app.append(el('div','ptitle',it[4]&&!/^Ep \d+$/.test(it[1])?epl(it)+' — '+cardTitle(it):it[1]));
   const prev=neighbor(key,id,-1),next=neighbor(key,id,1);
-  if(next)$app.append(el('div','upn',T.upn+(next[4]?'Ep '+next[4]+' — ':'')+cardTitle(next)));
+  if(next)$app.append(el('div','upn',T.upn+(next[4]?epl(next)+' — ':'')+cardTitle(next)));
   let cdT=null;
   const stopCd=()=>{clearInterval(cdT);cdT=null;const c=document.querySelector('.cd');if(c)c.remove()};
   const countdown=(label,secs,action)=>{
