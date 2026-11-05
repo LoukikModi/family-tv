@@ -26,6 +26,7 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 .row{display:flex;gap:6px}
 .tile{display:block;width:100%;border:0;border-radius:22px;color:#fff;margin:14px 0;padding:22px 20px;text-align:left;font:inherit;cursor:pointer;min-height:130px}
 .tile:active{filter:brightness(1.25)}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tgrid .tile{margin:0;min-height:150px;padding:16px 14px}.tgrid .tile .nm{font-size:1.05rem}.tgrid .tile .en{font-size:.62rem}.tgrid .tile .ic{font-size:2rem}
 .tile .ic{font-size:2.4rem;line-height:1}
 .tile .nm{font-size:1.35rem;font-weight:800;margin-top:6px}
 .tile .en{font-size:.8rem;opacity:.9}
@@ -70,10 +71,11 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 <script>
 const D=/*DATA*/null;
 const KEY='tv:'+D.profile;
-const T={back:'← मागे',cont:'▶ पुढे पाहा',latest:'▶ नवीन भाग पाहा',nextc:'▶ सुरू करा',rand:'🎲 कोणताही',more:'आणखी भाग दाखवा ▼',
+const T0={back:'← मागे',cont:'▶ पुढे पाहा',latest:'▶ नवीन भाग पाहा',nextc:'▶ सुरू करा',rand:'🎲 कोणताही',more:'आणखी भाग दाखवा ▼',
  done:'✔ पाहिले',yt:'YouTube मध्ये उघडते ↗',prev:'⏮ मागचा',next:'⏭ पुढचा',list:'☰ यादी',min:'मिनिटे',ep:'भाग',
  fail:'हा भाग इथे चालत नाही.',open:'YouTube मध्ये उघडा ↗',size:'अक्षरांचा आकार',none:'भाग सापडले नाहीत',
- oldnote:'हे जुने भाग YouTube मध्ये उघडतात. तिथे पुढचा भाग आपोआप सुरू होतो.',parts:'भाग'};
+ oldnote:'हे जुने भाग YouTube मध्ये उघडतात. तिथे पुढचा भाग आपोआप सुरू होतो.',parts:'भाग',mi:'मि.',s_new:'नवीन',s_old:'जुने',s_pop:'जास्त पाहिलेले',s_num:'क्रमांक',unw:'न पाहिलेले',search:'🔍 शोधा…'};
+const T=Object.assign({},T0,D.T||{});
 let S;
 try{S=Object.assign({w:{},p:{},last:null,z:2},JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={w:{},p:{},last:null,z:2}}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -90,7 +92,7 @@ const fdate=d=>d.split('-').reverse().join('-');
 const go=h=>{location.hash=h};
 const find=(key,id)=>SH[key]&&SH[key].items.find(i=>i[0]===id);
 function label(it){return it[1]}
-function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' मि.':'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
+function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' '+T.mi:'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
 
 function markWatched(id){S.w[id]=1;delete S.p[id];save()}
 function openExternal(key,it){S.w[it[0]]=1;S.last={show:key,id:it[0]};save();window.open(ytUrl(it),'_blank')}
@@ -113,10 +115,12 @@ function home(){
     const d=el('div');d.append(el('div','k',T.cont),el('div','t',label(last)));
     b.append(img,d);b.onclick=()=>play(S.last.show,last);w.append(b);
   }
+  const many=D.shows.length>4;
+  const tg=el('div',many?'tgrid':null);w.append(tg);
   D.shows.forEach(s=>{
     const b=el('button','tile');b.style.background=s.color;
     b.append(el('div','ic',s.icon),el('div','nm',s.mr),el('div','en',s.en+' · '+s.items.length+' '+T.parts));
-    b.onclick=()=>go('#/s/'+s.key);w.append(b);
+    b.onclick=()=>go('#/s/'+s.key);tg.append(b);
   });
   const z=el('div','size');z.append(el('span',null,T.size));
   const m=el('button','btn','अ−');m.onclick=()=>{S.z=Math.max(0,S.z-1);save();applySize()};
@@ -125,7 +129,7 @@ function home(){
   window.scrollTo(0,0);
 }
 
-const SORTS=[['new','नवीन'],['old','जुने'],['pop','जास्त पाहिलेले'],['num','क्रमांक']];
+const SORTS=[['new',T.s_new],['old',T.s_old],['pop',T.s_pop],['num',T.s_num]];
 const VIEW={};
 let shown=20;
 function sorted(s,o){
@@ -143,7 +147,7 @@ function showPage(key){
   $app.replaceChildren();
   S.o=S.o||{};
   const hasNum=s.items.filter(i=>i[4]).length>s.items.length*0.2;
-  const o=S.o[key]||(S.o[key]={s:hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new',u:0});
+  const o=S.o[key]||(S.o[key]={s:s.sort||(hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new'),u:0});
   if(o.s==='num'&&!hasNum)o.s='new';
   o.q='';
   const top=el('div','top');
@@ -164,10 +168,10 @@ function showPage(key){
     b.onclick=()=>{o.s=k;save();shown=20;[...pills.querySelectorAll('[data-k]')].forEach(c=>c.classList.toggle('on',c.dataset.k===o.s));draw()};
     pills.append(b);
   });
-  const ub=el('button','pill'+(o.u?' on':''),'न पाहिलेले');
+  const ub=el('button','pill'+(o.u?' on':''),T.unw);
   ub.onclick=()=>{o.u=o.u?0:1;save();shown=20;ub.classList.toggle('on',!!o.u);draw()};
   pills.append(ub);w.append(pills);
-  const q=el('input','search',null,{type:'search',placeholder:'🔍 शोधा…',autocomplete:'off'});
+  const q=el('input','search',null,{type:'search',placeholder:T.search,autocomplete:'off'});
   q.oninput=()=>{o.q=q.value.trim();shown=20;draw()};w.append(q);
   const cnt=el('div','count');w.append(cnt);
   const grid=el('div','grid');w.append(grid);
