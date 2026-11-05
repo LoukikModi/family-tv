@@ -15,14 +15,14 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:22px}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Noto Sans Devanagari","Segoe UI",Roboto,sans-serif;line-height:1.35;padding-bottom:40px}
-h1{font-size:1.5rem;margin:0}
-.top{display:flex;align-items:center;gap:14px;padding:14px 14px 6px}
+h1{font-size:1.25rem;margin:0;line-height:1.2}
+.top{display:flex;align-items:center;gap:12px;padding:10px 14px 4px}
 .wrap{padding:8px 14px;max-width:760px;margin:0 auto}
 .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:72px;margin:10px 0;padding:14px 18px;border:0;border-radius:18px;background:#2b3a48;color:#fff;font:inherit;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
 .btn:active{filter:brightness(1.35);transform:scale(.99)}
 .btn.main{background:#1f9d55;font-size:1.1rem}
 .btn.alt{background:#c77d0a}
-.btn.sm{min-height:60px;width:auto;flex:1;margin:6px 4px}
+.btn.sm{min-height:56px;width:auto;flex:1;margin:6px 4px}
 .row{display:flex;gap:6px}
 .tile{display:block;width:100%;border:0;border-radius:22px;color:#fff;margin:14px 0;padding:22px 20px;text-align:left;font:inherit;cursor:pointer;min-height:130px}
 .tile:active{filter:brightness(1.25)}
@@ -42,6 +42,19 @@ h1{font-size:1.5rem;margin:0}
 .card.done{opacity:.62}
 .badge{position:absolute;top:10px;right:10px;background:var(--ok);color:#06210f;font-weight:800;font-size:.8rem;padding:6px 12px;border-radius:999px}
 .badge.yt{background:#fff;color:#111}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,1fr)}}
+.grid .card{margin:0}
+.grid .card .b{padding:8px 10px 10px}
+.grid .card .t{font-size:.85rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
+.grid .card .m{font-size:.68rem}
+.grid .badge{font-size:.62rem;padding:3px 8px;top:6px;right:6px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.pill{min-height:46px;padding:6px 14px;border-radius:999px;border:2px solid #3b4b5b;background:transparent;color:#fff;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.pill.on{background:#fff;color:#111;border-color:#fff}
+.search{width:100%;min-height:48px;border-radius:14px;border:2px solid #3b4b5b;background:#1c242c;color:#fff;font:inherit;font-size:.9rem;padding:8px 14px;margin:4px 0}
+.count{color:var(--dim);font-size:.75rem;margin:4px 2px}
+.wrap.wide{max-width:900px}
 .note{background:#2a2f1a;border-radius:14px;padding:12px 14px;font-size:.8rem;color:#e8e2b0;margin:8px 0}
 #pv{position:relative;width:100%;aspect-ratio:16/9;background:#000}
 #pv iframe{position:absolute;inset:0;width:100%;height:100%}
@@ -57,7 +70,7 @@ h1{font-size:1.5rem;margin:0}
 <script>
 const D=/*DATA*/null;
 const KEY='tv:'+D.profile;
-const T={back:'← मागे',cont:'▶ पुढे पाहा',latest:'▶ नवीन भाग पाहा',nextc:'▶ पुढचा भाग पाहा',rand:'🎲 कोणताही एक भाग',more:'आणखी भाग दाखवा ▼',
+const T={back:'← मागे',cont:'▶ पुढे पाहा',latest:'▶ नवीन भाग पाहा',nextc:'▶ सुरू करा',rand:'🎲 कोणताही',more:'आणखी भाग दाखवा ▼',
  done:'✔ पाहिले',yt:'YouTube मध्ये उघडते ↗',prev:'⏮ मागचा',next:'⏭ पुढचा',list:'☰ यादी',min:'मिनिटे',ep:'भाग',
  fail:'हा भाग इथे चालत नाही.',open:'YouTube मध्ये उघडा ↗',size:'अक्षरांचा आकार',none:'भाग सापडले नाहीत',
  oldnote:'हे जुने भाग YouTube मध्ये उघडतात. तिथे पुढचा भाग आपोआप सुरू होतो.',parts:'भाग'};
@@ -77,7 +90,7 @@ const fdate=d=>d.split('-').reverse().join('-');
 const go=h=>{location.hash=h};
 const find=(key,id)=>SH[key]&&SH[key].items.find(i=>i[0]===id);
 function label(it){return it[1]}
-function meta(it){return [it[3]?it[3]+' '+T.min:'',fdate(it[2])].filter(Boolean).join(' · ')}
+function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' मि.':'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
 
 function markWatched(id){S.w[id]=1;delete S.p[id];save()}
 function openExternal(key,it){S.w[it[0]]=1;S.last={show:key,id:it[0]};save();window.open(ytUrl(it),'_blank')}
@@ -112,24 +125,58 @@ function home(){
   window.scrollTo(0,0);
 }
 
-let shown=12;
+const SORTS=[['new','नवीन'],['old','जुने'],['pop','जास्त पाहिलेले'],['num','क्रमांक']];
+const VIEW={};
+let shown=20;
+function sorted(s,o){
+  let a=s.items.slice();
+  if(o.u)a=a.filter(i=>!S.w[i[0]]);
+  if(o.q){const q=o.q.toLowerCase();a=a.filter(i=>i[1].toLowerCase().includes(q)||String(i[4])===q)}
+  if(o.s==='new')a.sort((x,y)=>x[2]<y[2]?1:x[2]>y[2]?-1:y[4]-x[4]);
+  else if(o.s==='old')a.sort((x,y)=>x[2]<y[2]?-1:x[2]>y[2]?1:x[4]-y[4]);
+  else if(o.s==='pop')a.sort((x,y)=>(y[7]||0)-(x[7]||0));
+  else a.sort((x,y)=>((x[4]||1e9)-(y[4]||1e9))||(x[2]<y[2]?-1:1));
+  return a;
+}
 function showPage(key){
   const s=SH[key];if(!s){go('#/');return}
   $app.replaceChildren();
+  S.o=S.o||{};
+  const hasNum=s.items.filter(i=>i[4]).length>s.items.length*0.2;
+  const o=S.o[key]||(S.o[key]={s:hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new',u:0});
+  if(o.s==='num'&&!hasNum)o.s='new';
+  o.q='';
   const top=el('div','top');
-  const back=el('button','btn sm',T.back);  back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go('#/');
+  const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go('#/');
   top.append(back,el('h1',null,s.mr));$app.append(top);
-  const w=el('div','wrap');
+  const w=el('div','wrap wide');
   if(!s.items.length){w.append(el('div','empty',T.none));$app.append(w);return}
-  const bn=el('button','btn main',(key==='cidold'||key==='cidclassic')?T.nextc:T.latest);
-  bn.onclick=()=>play(key,firstUnwatched(key));w.append(bn);
-  const br=el('button','btn alt',T.rand);br.onclick=()=>play(key,randomUnwatched(key));w.append(br);
+  const act=el('div','row');
+  const bn=el('button','btn sm main',T.nextc);
+  bn.onclick=()=>{const l=VIEW[key]||s.items;play(key,l.find(i=>!S.w[i[0]])||l[0])};
+  const br=el('button','btn sm alt',T.rand);
+  br.onclick=()=>{const l=VIEW[key]||s.items;const u=l.filter(i=>!S.w[i[0]]);const a=u.length?u:l;play(key,a[Math.floor(Math.random()*a.length)])};
+  act.append(bn,br);w.append(act);
   if(s.items.every(i=>i[5]))w.append(el('div','note',T.oldnote));
-  const list=el('div');w.append(list);
+  const pills=el('div','pills');
+  SORTS.filter(x=>x[0]!=='num'||hasNum).forEach(([k,n])=>{
+    const b=el('button','pill'+(o.s===k?' on':''),n);b.dataset.k=k;
+    b.onclick=()=>{o.s=k;save();shown=20;[...pills.querySelectorAll('[data-k]')].forEach(c=>c.classList.toggle('on',c.dataset.k===o.s));draw()};
+    pills.append(b);
+  });
+  const ub=el('button','pill'+(o.u?' on':''),'न पाहिलेले');
+  ub.onclick=()=>{o.u=o.u?0:1;save();shown=20;ub.classList.toggle('on',!!o.u);draw()};
+  pills.append(ub);w.append(pills);
+  const q=el('input','search',null,{type:'search',placeholder:'🔍 शोधा…',autocomplete:'off'});
+  q.oninput=()=>{o.q=q.value.trim();shown=20;draw()};w.append(q);
+  const cnt=el('div','count');w.append(cnt);
+  const grid=el('div','grid');w.append(grid);
   const more=el('button','btn',T.more);
   function draw(){
-    list.replaceChildren();
-    s.items.slice(0,shown).forEach(it=>{
+    const list=sorted(s,o);VIEW[key]=list;
+    cnt.textContent=list.length+' '+T.parts;
+    grid.replaceChildren();
+    list.slice(0,shown).forEach(it=>{
       const done=!!S.w[it[0]];
       let c;
       if(it[5]){c=el('a','card'+(done?' done':''),null,{href:ytUrl(it),target:'_blank',rel:'noopener'});
@@ -139,11 +186,11 @@ function showPage(key){
       const b=el('div','b');b.append(el('div','t',label(it)),el('div','m',meta(it)));
       c.append(img,b);
       if(done)c.append(el('div','badge',T.done));else if(it[5])c.append(el('div','badge yt',T.yt));
-      list.append(c);
+      grid.append(c);
     });
-    more.style.display=shown<s.items.length?'flex':'none';
+    more.style.display=shown<list.length?'flex':'none';
   }
-  more.onclick=()=>{shown+=12;draw()};
+  more.onclick=()=>{shown+=20;draw()};
   draw();w.append(more);$app.append(w);window.scrollTo(0,0);
 }
 
@@ -158,7 +205,7 @@ function savePos(){
   if(t>d*0.92){markWatched(id)}else if(t>10){S.p[id]=t;S.last={show:P.__key,id:id};save()}
 }
 function neighbor(key,id,dir){
-  const items=SH[key].items;let i=items.findIndex(x=>x[0]===id);
+  const items=VIEW[key]||SH[key].items;let i=items.findIndex(x=>x[0]===id);
   for(i+=dir;i>=0&&i<items.length;i+=dir){if(!items[i][5])return items[i]}
   return null;
 }

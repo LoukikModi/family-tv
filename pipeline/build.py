@@ -214,7 +214,7 @@ def select(lib):
         else:
             rows.sort(key=lambda r: (r['p'], episode_no(r['t'])), reverse=True)
         out[s] = [[r['id'], clean_title(r['t'], s), r['p'], round(r['s'] / 60), episode_no(r['t']),
-                   0 if r['e'] else 1, 1 if r.get('pl') else 0] for r in rows]
+                   0 if r['e'] else 1, 1 if r.get('pl') else 0, r['v']] for r in rows]
     return out
 
 
