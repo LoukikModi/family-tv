@@ -271,7 +271,12 @@ def _rom_word(w, deep=False):
     return ''.join(out)
 
 
+ROMANIZE = False      # titles keep the source's own script; set True to turn Marathi/Hindi/Gujarati into Latin letters
+
+
 def roman(text):
+    if not ROMANIZE:
+        return text
     def sub(m):
         run = m.group(0)
         deep = '\u0A80' <= run[0] <= '\u0AFF'          # Gujarati drops more inner a-sounds
