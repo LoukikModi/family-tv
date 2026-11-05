@@ -42,12 +42,12 @@ SHOWS = {
 }
 # Home screen tiles per person. A group opens a screen with its own big choices.
 PROFILES = {
-    'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'label': '👨 Pappa', 'color': '#1d4ed8',
+    'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'emoji': ['😂', '🕵️', '😂', '🕵️'], 'label': '👨 Pappa', 'color': '#1d4ed8',
               'tiles': [{'group': 'hasya', 'name': 'Hasya Jatra', 'sub': 'Marathi comedy', 'icon': '😂', 'color': '#b45309',
                          'children': ['hasya', 'hasyamore']},
                         {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
                          'children': ['cidnew', 'cidold', 'cidclassic']}]},
-    'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'label': '👩 Mummy', 'color': '#c2410c',
+    'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'emoji': ['🙏', '🪔', '💍', '🌅'], 'label': '👩 Mummy', 'color': '#c2410c',
               'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba')]},
 }
 
@@ -448,12 +448,16 @@ HOME = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <style>
 body{margin:0;background:#f6f3ec;color:#16181d;font:22px system-ui,-apple-system,"Noto Sans Devanagari","Noto Sans Gujarati",sans-serif;padding:18px}
 h1{font-size:1.3rem;margin:6px 4px 14px}
-a{display:flex;flex-direction:column;justify-content:center;min-height:38vh;margin:14px 0;padding:22px;border-radius:26px;color:#fff;text-decoration:none;font-weight:800;font-size:2rem}
-a small{font-size:1rem;font-weight:600;opacity:.92}
+main{max-width:1100px;margin:0 auto}
+a{display:flex;flex-direction:column;justify-content:center;min-height:34vh;margin:14px 0;padding:22px;border-radius:26px;color:#fff;text-decoration:none;font-weight:800;font-size:2rem}
+a small{display:block;font-size:1rem;font-weight:600;opacity:.92}
 a:active{filter:brightness(1.25)}
-</style></head><body><h1>Family TV</h1>
+.th{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.th img,.th span{width:100%%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:rgba(255,255,255,.2);box-shadow:0 2px 6px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+@media(min-width:700px){a{flex-direction:row;align-items:center;justify-content:space-between;gap:24px;min-height:30vh}.th{grid-template-columns:repeat(2,1fr);width:min(55%%,560px);margin:0;gap:12px}}
+</style></head><body><main><h1>Family TV</h1>
 %s
-</body></html>"""
+</main></body></html>"""
 
 
 def write_site(shows):
@@ -472,8 +476,25 @@ def write_site(shows):
         html = html.replace('__TITLE__', prof['title'])
         open(os.path.join(folder, 'index.html'), 'w', encoding='utf-8').write(html)
         write_manifest(folder, prof['title'], prof['color'])
-        tiles.append('<a style="background:%s" href="%s/">%s<small>%s</small></a>' % (
-            prof['color'], pid, prof['label'], prof['en']))
+        # popular thumbnails, taken in turn from each tile, fill the right side
+        per_tile = []
+        for t in prof['tiles']:
+            ks = t.get('children') or [t['show']]
+            pool = sorted((it for k in ks for it in shows[k] if not it[5]), key=lambda i: -(i[7] or 0))
+            per_tile.append(pool[:6])
+        chosen, seen_t = [], set()
+        for rnd in range(6):
+            for pool in per_tile:
+                if rnd < len(pool) and len(chosen) < 4:
+                    it = pool[rnd]
+                    key = re.sub(r'\W+', '', (it[1] or '').lower())[:16]
+                    if key not in seen_t:
+                        seen_t.add(key)
+                        chosen.append(it)
+        th = ''.join('<img loading="lazy" alt="" src="https://i.ytimg.com/vi/%s/mqdefault.jpg" onerror="this.style.visibility=\'hidden\'">' % it[0] for it in chosen)
+        th += ''.join('<span>%s</span>' % e for e in prof['emoji'][len(chosen):4])
+        tiles.append('<a style="background:%s" href="%s/"><div>%s<small>%s</small></div><div class="th">%s</div></a>' % (
+            prof['color'], pid, prof['label'], prof['en'], th))
     open(os.path.join(PUB, 'index.html'), 'w', encoding='utf-8').write(HOME % '\n'.join(tiles))
     write_manifest(PUB, 'Family TV', '#c0392b')
     # old address from the first version still works
