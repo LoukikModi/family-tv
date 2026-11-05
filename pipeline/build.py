@@ -10,6 +10,7 @@ import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIB = os.path.join(ROOT, 'data', 'library.json')
+STATE = os.path.join(ROOT, 'data', 'state.json')
 PUB = os.path.join(ROOT, 'public')
 TEMPLATE = os.path.join(ROOT, 'web', 'app.html')
 KEY = os.environ.get('YT_KEY', '')
@@ -185,21 +186,35 @@ def collect(lib, wanted, source_playlists, title_re, upload_pages, playlist_page
     return len(found)
 
 
-def fetch(lib, mode):
-    deep = mode == 'full'
-    up_pages = 400 if deep else 4
+def pages_for(state, key, mode):
+    """Deep scan a source once (or when asked); afterwards only look at the newest uploads."""
+    if mode == 'deep' or not state['deep'].get(key):
+        return 400, True
+    return (40 if mode == 'full' else 4), False
+
+
+def fetch(lib, state, mode):
+    done = lambda key, deep: deep and state['deep'].__setitem__(key, True)
     # Hasya Jatra on Sony Marathi
-    sources = [('UU' + SONY_MARATHI[2:], up_pages)]
+    n, deep = pages_for(state, 'sony_marathi', mode)
+    sources = [('UU' + SONY_MARATHI[2:], n)]
     if deep:
         sources += [(p, 60) for p in channel_playlists(SONY_MARATHI, HJ_RE)]
-    n1 = collect(lib, None, sources, HJ_RE, up_pages, 60)
+    n1 = collect(lib, None, sources, HJ_RE, n, 60)
+    done('sony_marathi', deep)
     # CID on SET India
-    sources = [('UU' + SET_INDIA[2:], up_pages), (CID_PLAYLIST, 60)]
+    n, deep = pages_for(state, 'set_india', mode)
+    sources = [('UU' + SET_INDIA[2:], n), (CID_PLAYLIST, 60)]
     if deep:
         sources += [(p, 60) for p in channel_playlists(SET_INDIA, CID_RE) if p != CID_PLAYLIST]
-    n2 = collect(lib, None, sources, CID_RE, up_pages, 60, tag=CID_PLAYLIST)
-    # Mummy: Gujarati devotional / wedding songs from the big official labels
-    n3 = collect(lib, None, [('UU' + c[2:], up_pages) for c in MUMMY_CHANNELS], MUMMY_ANY, up_pages, 60, kind='m')
+    n2 = collect(lib, None, sources, CID_RE, n, 60, tag=CID_PLAYLIST)
+    done('set_india', deep)
+    # Mummy: Gujarati devotional / wedding songs, one channel at a time so progress is kept
+    n3 = 0
+    for c in MUMMY_CHANNELS:
+        n, deep = pages_for(state, c, mode)
+        n3 += collect(lib, None, [('UU' + c[2:], n)], MUMMY_ANY, n, 60, kind='m')
+        done(c, deep)
     print('candidates: hasya-ish %d, cid-ish %d, mummy-ish %d, library %d' % (n1, n2, n3, len(lib)))
 
 
@@ -380,13 +395,18 @@ def write_site(shows):
 
 
 def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else 'quick'
+    mode = sys.argv[1] if len(sys.argv) > 1 else 'quick'      # rebuild | quick | full | deep
     old = open(LIB, 'rb').read() if os.path.exists(LIB) else b''
     lib = json.loads(old) if old else {}
-    if KEY:
+    old_state = open(STATE, 'rb').read() if os.path.exists(STATE) else b''
+    state = json.loads(old_state) if old_state else {}
+    state.setdefault('deep', {})
+    if KEY and mode != 'rebuild':
         try:
-            fetch(lib, mode)
+            fetch(lib, state, mode)
+            state['quota_hit'] = False
         except Quota:
+            state['quota_hit'] = True
             print('quota exhausted, using what we have')
     elif not lib:
         raise SystemExit('YT_KEY missing and no data/library.json')
@@ -395,10 +415,12 @@ def main():
         print('%s: %d' % (k, len(v)))
     write_site(shows)
     new = json.dumps(lib, ensure_ascii=False, separators=(',', ':'), sort_keys=True).encode()
-    changed = new != old
+    new_state = json.dumps(state, indent=1, sort_keys=True).encode()
+    changed = new != old or new_state != old_state
     if changed:
         os.makedirs(os.path.dirname(LIB), exist_ok=True)
         open(LIB, 'wb').write(new)
+        open(STATE, 'wb').write(new_state)
     out = os.environ.get('GITHUB_OUTPUT')
     if out:
         open(out, 'a').write('changed=%s\n' % ('true' if changed else 'false'))

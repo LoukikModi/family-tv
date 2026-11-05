@@ -4,17 +4,18 @@ on:
   schedule:
     # GitHub treats schedules as best-effort, so these may run late.
     - cron: '17 */3 * * *'                      # every 3 hours: newest uploads
-    - cron: '40 1 * * *'                        # daily: deep scan of channels and playlists
+    - cron: '15 8 * * *'                        # daily, just after YouTube's quota resets: wider scan
+    - cron: '30 8 * * 0'                        # Sundays: deep rescan of everything
   push:
     branches: [main]
     paths: ['web/**', 'pipeline/**', '.github/workflows/update.yml']
   workflow_dispatch:
     inputs:
       mode:
-        description: quick = newest uploads only, full = deep scan
+        description: rebuild = no YouTube calls, quick = newest uploads, full = wider scan, deep = rescan everything
         type: choice
-        options: [full, quick]
-        default: full
+        options: [quick, full, deep, rebuild]
+        default: quick
 
 permissions:
   contents: write
@@ -39,7 +40,7 @@ jobs:
       - id: upd
         env:
           YT_KEY: ${{ secrets.YT_API_KEY }}
-          MODE: ${{ github.event.inputs.mode || ((github.event_name == 'push' || github.event.schedule == '40 1 * * *') && 'full') || 'quick' }}
+          MODE: ${{ github.event.inputs.mode || (github.event_name == 'push' && 'rebuild') || (github.event.schedule == '15 8 * * *' && 'full') || (github.event.schedule == '30 8 * * 0' && 'deep') || 'quick' }}
         run: python pipeline/build.py "$MODE"
       - name: Commit updated data
         if: steps.upd.outputs.changed == 'true'
