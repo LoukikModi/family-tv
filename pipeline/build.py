@@ -26,7 +26,8 @@ EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})\b', re.I)
 
 # What each person sees. Add more people / categories here.
 SHOWS = {
-    'hasya': {'name': 'Hasya Jatra', 'sub': 'Maharashtrachi HasyaJatra', 'icon': '😂', 'color': '#b45309', 'voice': 'mr-IN'},
+    'hasya': {'name': 'Full episodes', 'sub': 'Numbered episodes, 2018 onwards', 'icon': '😂', 'color': '#b45309', 'voice': 'mr-IN'},
+    'hasyamore': {'name': 'Comedy specials', 'sub': 'Compilations and new-season uploads', 'icon': '🎭', 'color': '#9a3412', 'voice': 'mr-IN'},
     'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#1d4ed8', 'voice': 'hi-IN'},
     'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#6d28d9', 'voice': 'hi-IN'},
     'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#475569', 'voice': 'hi-IN'},
@@ -42,7 +43,8 @@ SHOWS = {
 # Home screen tiles per person. A group opens a screen with its own big choices.
 PROFILES = {
     'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'label': '👨 Pappa', 'color': '#1d4ed8',
-              'tiles': [{'show': 'hasya'},
+              'tiles': [{'group': 'hasya', 'name': 'Hasya Jatra', 'sub': 'Marathi comedy', 'icon': '😂', 'color': '#b45309',
+                         'children': ['hasya', 'hasyamore']},
                         {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
                          'children': ['cidnew', 'cidold', 'cidclassic']}]},
     'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'label': '👩 Mummy', 'color': '#c2410c',
@@ -309,7 +311,9 @@ def episode_no(t):
 def show_of(r):
     t = r['t']
     if HJ_RE.search(t):
-        return 'hasya' if r['e'] and r['s'] >= 2100 else None
+        if not (r['e'] and r['s'] >= 2100):
+            return None
+        return 'hasya' if rno(r) else 'hasyamore'
     if CID_RE.search(t):
         if r['s'] < 1200:
             return None
@@ -399,7 +403,7 @@ def select(lib):
         s = show_of(r)
         if s:
             groups[s].append(dict(r, id=vid))
-    for k in ('hasya', 'cidnew', 'cidold'):
+    for k in ('hasya', 'hasyamore', 'cidnew', 'cidold'):
         groups[k] = dedupe(groups[k])
     out = {}
     for s, rows in groups.items():

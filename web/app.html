@@ -75,6 +75,8 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 .tip{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 16px;font-size:.8rem}
 .tip summary{min-height:52px;display:flex;align-items:center;font-weight:700;font-size:.9rem;cursor:pointer}
 .tip p{margin:4px 0 10px;color:var(--dim)}
+.fv{position:absolute;right:8px;bottom:14px;color:#fff;background:rgba(190,18,60,.92);border-radius:999px;padding:0 9px;font-size:.8rem;line-height:1.5}
+.toast{position:fixed;left:14px;right:14px;bottom:20px;background:#16181d;color:#fff;border-radius:16px;padding:16px;font-weight:700;text-align:center;z-index:9;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .empty{color:var(--dim);padding:30px 0;text-align:center}
 </style>
 </head>
@@ -88,10 +90,11 @@ const T0={back:'← Back',cont:'▶ Continue watching',nextc:'▶ Start',rand:'�
  fail:"This video can't play here.",open:'Open in YouTube ↗',size:'Text size',none:'Nothing found',
  oldnote:'These open in YouTube.',parts:'videos',mi:'min',s_new:'Newest',s_old:'Oldest',s_pop:'Most viewed',s_num:'Episode no.',unw:'Unwatched',search:'🔍 Search…',
  filt:'⚙ Sort & search ▾',filt2:'⚙ Sort & search ▴',back10:'⏪ 10s',fwd30:'30s ⏩',pause:'⏸ Pause',play:'▶ Play',
+ shuf:'🔀 Play all, shuffled',fav0:'♡ Save to favourites',fav1:'♥ Saved to favourites',favs:'♥ Favourites',favsub:'Videos you saved',sleep:'😴 Sleep timer: ',off:'off',sleepdone:'Sleep timer finished. Good night!',
  tv:'📺 Watch on TV',tv1:'Smart TV: open this website in the TV’s own web browser.',tv2:'Phone with Chrome: tap the ⋮ menu, then Cast…, and pick your TV.',tv3:'Or plug the phone into the TV with an HDMI cable (Android) or Lightning/USB-C adapter (iPhone).'};
 const T=Object.assign({},T0,D.T||{});
 let S;
-try{S=Object.assign({w:{},p:{},last:null,z:2},JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={w:{},p:{},last:null,z:2}}
+try{S=Object.assign({w:{},p:{},last:null,z:2,fav:{}},JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={w:{},p:{},last:null,z:2,fav:{}}}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const SIZES=[18,22,26,30];
 const applySize=()=>{document.documentElement.style.fontSize=SIZES[Math.max(0,Math.min(3,S.z))]+'px'};
@@ -110,6 +113,11 @@ function cardTitle(it){return it[4]?(it[1].replace(/^Ep \d+( — )?/,'')||it[1])
 function meta(it){const d=it[2].split('-');return [it[3]?it[3]+' '+T.mi:'',d[2]+'-'+d[1]+'-'+d[0].slice(2)].filter(Boolean).join(' · ')}
 function frac(it){if(S.w[it[0]])return 1;const p=S.p[it[0]];return p&&it[3]?Math.min(.97,p/(it[3]*60)):0}
 
+function favItems(){const seen={},a=[];D.shows.forEach(s=>s.items.forEach(i=>{if(S.fav[i[0]]&&!seen[i[0]]){seen[i[0]]=1;a.push(i)}}));return a}
+function refreshFav(){SH.fav={key:'fav',name:T.favs,sub:T.favsub,icon:'♥',color:'#be123c',sort:'new',items:favItems()}}
+function toast(msg){const d=el('div','toast',msg);document.body.append(d);setTimeout(()=>d.remove(),9000);d.onclick=()=>d.remove()}
+let sleepAt=0,sleepIdx=0;const SLEEPS=[0,15,30,60];
+setInterval(()=>{if(sleepAt&&Date.now()>=sleepAt){sleepAt=0;sleepIdx=0;try{if(P&&P.pauseVideo)P.pauseVideo()}catch(e){}toast(T.sleepdone)}},10000);
 function markWatched(id){S.w[id]=1;delete S.p[id];save()}
 function openExternal(key,it){S.w[it[0]]=1;S.last={show:key,id:it[0]};save();window.open(ytUrl(it),'_blank')}
 function play(key,it){
@@ -138,6 +146,11 @@ function home(){
     b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+n+' '+T.parts));
     b.onclick=()=>go(g?'#/g/'+g.group:'#/s/'+s.key);tg.append(b);
   });
+  if(D.profile==='mummy'||SH.fav.items.length){
+    const s=SH.fav;const b=el('button','tile');b.style.background=s.color;b.style.marginTop='10px';
+    b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+s.items.length+' '+T.parts));
+    b.onclick=()=>go('#/s/fav');w.append(b);
+  }
   const z=el('div','size');z.append(el('span',null,T.size));
   const m=el('button','btn','A−');m.onclick=()=>{S.z=Math.max(0,S.z-1);save();applySize()};
   const p=el('button','btn','A+');p.onclick=()=>{S.z=Math.min(3,S.z+1);save();applySize()};
@@ -193,6 +206,13 @@ function showPage(key){
   const br=el('button','btn sm alt',T.rand);
   br.onclick=()=>{const l=VIEW[key]||s.items;const u=l.filter(i=>!S.w[i[0]]);const a=u.length?u:l;play(key,a[Math.floor(Math.random()*a.length)])};
   act.append(bn,br);w.append(act);
+  if(D.profile==='mummy'||key==='fav'){
+    const sh=el('button','btn',T.shuf);
+    sh.onclick=()=>{const l=sorted(s,o).filter(i=>!i[5]);if(!l.length)return;
+      for(let i=l.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[l[i],l[j]]=[l[j],l[i]]}
+      VIEW[key]=l;go('#/p/'+key+'/'+l[0][0])};
+    w.append(sh);
+  }
   if(s.items.every(i=>i[5]))w.append(el('div','note',T.oldnote));
 
   /* sort & search live behind one button so the list stays clean */
@@ -246,6 +266,7 @@ function showPage(key){
       const b=el('div','b');b.append(el('div','t',cardTitle(it)),el('div','m',meta(it)));
       c.append(th,b);
       if(it[4])c.append(el('div','epb','Ep '+it[4]));
+      if(S.fav[it[0]])c.append(el('div','fv','♥'));
       if(done)c.append(el('div','badge',T.done));else if(it[5])c.append(el('div','badge yt',T.yt));
       grid.append(c);
     });
@@ -299,6 +320,14 @@ function playerPage(key,id){
   const bp=el('button','btn sm',T.prev);bp.disabled=!prev;bp.onclick=()=>prev&&go('#/p/'+key+'/'+prev[0]);
   const bn=el('button','btn sm main',T.next);bn.disabled=!next;bn.onclick=()=>next&&go('#/p/'+key+'/'+next[0]);
   row.append(bp,bn);w.append(row);
+  const fb=el('button','btn',S.fav[id]?T.fav1:T.fav0);
+  fb.onclick=()=>{if(S.fav[id])delete S.fav[id];else S.fav[id]=1;save();fb.textContent=S.fav[id]?T.fav1:T.fav0;refreshFav()};
+  w.append(fb);
+  const sb=el('button','btn');
+  const slab=()=>T.sleep+(sleepAt>Date.now()?SLEEPS[sleepIdx]+' min':T.off);
+  sb.textContent=slab();
+  sb.onclick=()=>{sleepIdx=(sleepIdx+1)%SLEEPS.length;sleepAt=SLEEPS[sleepIdx]?Date.now()+SLEEPS[sleepIdx]*60000:0;sb.textContent=slab()};
+  w.append(sb);
   const bl=el('button','btn',T.list);bl.onclick=()=>go('#/s/'+key);w.append(bl);
   $app.append(w);window.scrollTo(0,0);
   S.last={show:key,id:id};save();
@@ -321,7 +350,7 @@ function playerPage(key,id){
 }
 
 function render(){
-  stopPlayer();
+  stopPlayer();refreshFav();
   const h=location.hash.split('/');
   if(h[1]==='g')groupPage(h[2]);
   else if(h[1]==='s')showPage(decodeURIComponent(h[2]||''));
