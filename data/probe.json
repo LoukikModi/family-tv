@@ -8,6 +8,9 @@
  "hasyajatra": {
   "uploads_scanned": 6000,
   "matched": 4494,
+  "not_embeddable": 0,
+  "embeddable_but_short": 1527,
+  "not_embeddable_20min_plus": 0,
   "embeddable_20min_plus": 2967,
   "oldest": "2025-02-06",
   "newest": "2026-11-05",
@@ -20,25 +23,25 @@
     "t": "आजारी बॉस आणि अतरंगी सेक्रेटरी Skit| महाराष्ट्राची हास्यजत्रा | Maharashtrachi Hasya Jatra",
     "p": "2026-11-04",
     "s": 1476,
-    "v": 102150
+    "v": 103976
    },
    {
     "t": "Vanita, Namrata|Maharashtrachi HasyaJatra | New Season | Best Comedy|Sign up for Sony LIV ",
     "p": "2026-11-04",
     "s": 2616,
-    "v": 3749
+    "v": 3757
    },
    {
     "t": "वनिता, नम्रता, पृथ्वीक आणि चेतना | Maharashtrachi HasyaJatra | New Season | Best Comedy",
     "p": "2026-11-04",
     "s": 2612,
-    "v": 21436
+    "v": 21531
    },
    {
     "t": "वनिता, नम्रता, पृथ्विक, प्रियदर्शिनी आणि श्याम | Maharashtrachi HasyaJatra | New Season |B",
     "p": "2026-11-05",
     "s": 5232,
-    "v": 133
+    "v": 175
    },
    {
     "t": "Samir & Shivali | Maharashtrachi HasyaJatra| New Season| Best Comedy|Sign up for Sony LIV ",
@@ -77,6 +80,9 @@
  "cid_in_playlist": {
   "scanned": 604,
   "matched": 604,
+  "not_embeddable": 595,
+  "embeddable_but_short": 2,
+  "not_embeddable_20min_plus": 576,
   "embeddable_20min_plus": 7,
   "oldest": "2020-09-18",
   "newest": "2023-01-16",
@@ -147,6 +153,9 @@
  "cid_on_channel": {
   "uploads_scanned": 6000,
   "matched": 553,
+  "not_embeddable": 0,
+  "embeddable_but_short": 18,
+  "not_embeddable_20min_plus": 0,
   "embeddable_20min_plus": 535,
   "oldest": "2026-06-29",
   "newest": "2026-11-04",
@@ -164,7 +173,7 @@
     "t": "Team CID कैसे करेगी एक Lethal Party का पर्दाफ़ाश? | CID | Full Episode",
     "p": "2026-11-04",
     "s": 5101,
-    "v": 17357
+    "v": 17406
    },
    {
     "t": "Lethal Party Mystery | CID | Full Episode | Sign up for Sony LIV on YouTube",
@@ -176,7 +185,7 @@
     "t": "किसने किया Purvi को Kidnap? | CID | Full Episode",
     "p": "2026-11-04",
     "s": 2888,
-    "v": 18866
+    "v": 18904
    },
    {
     "t": "A.I Chatbot Grehani Traps Team CID | CID | New Season | Thrilling Cases",
