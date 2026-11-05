@@ -26,7 +26,8 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 .row{display:flex;gap:6px}
 .tile{display:block;width:100%;border:0;border-radius:22px;color:#fff;margin:14px 0;padding:22px 20px;text-align:left;font:inherit;cursor:pointer;min-height:130px}
 .tile:active{filter:brightness(1.25)}
-.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tgrid .tile{margin:0;min-height:150px;padding:16px 14px}.tgrid .tile .nm{font-size:1.05rem}.tgrid .tile .en{font-size:.62rem}.tgrid .tile .ic{font-size:2rem}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tgrid .tile{margin:0;min-height:150px;padding:16px 14px}.tgrid .tile .nm{font-size:1.05rem}.tgrid .tile .en{font-size:.62rem}.tgrid .tile.big{min-height:30vh;display:flex;flex-direction:column;justify-content:center}
+.tile .ic{font-size:2rem}
 .tile .ic{font-size:2.4rem;line-height:1}
 .tile .nm{font-size:1.35rem;font-weight:800;margin-top:6px}
 .tile .en{font-size:.8rem;opacity:.9}
@@ -71,10 +72,10 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 <script>
 const D=/*DATA*/null;
 const KEY='tv:'+D.profile;
-const T0={back:'← मागे',cont:'▶ पुढे पाहा',latest:'▶ नवीन भाग पाहा',nextc:'▶ सुरू करा',rand:'🎲 कोणताही',more:'आणखी भाग दाखवा ▼',
- done:'✔ पाहिले',yt:'YouTube मध्ये उघडते ↗',prev:'⏮ मागचा',next:'⏭ पुढचा',list:'☰ यादी',min:'मिनिटे',ep:'भाग',
- fail:'हा भाग इथे चालत नाही.',open:'YouTube मध्ये उघडा ↗',size:'अक्षरांचा आकार',none:'भाग सापडले नाहीत',
- oldnote:'हे जुने भाग YouTube मध्ये उघडतात. तिथे पुढचा भाग आपोआप सुरू होतो.',parts:'भाग',mi:'मि.',s_new:'नवीन',s_old:'जुने',s_pop:'जास्त पाहिलेले',s_num:'क्रमांक',unw:'न पाहिलेले',search:'🔍 शोधा…'};
+const T0={back:'← Back',cont:'▶ Continue watching',nextc:'▶ Start',rand:'🎲 Surprise me',more:'Show more ▼',
+ done:'✔ Watched',yt:'Opens in YouTube ↗',prev:'⏮ Previous',next:'⏭ Next',list:'☰ List',
+ fail:"This video can't play here.",open:'Open in YouTube ↗',size:'Text size',none:'Nothing found',
+ oldnote:'These open in YouTube.',parts:'videos',mi:'min',s_new:'Newest',s_old:'Oldest',s_pop:'Most viewed',s_num:'Episode no.',unw:'Unwatched',search:'🔍 Search…'};
 const T=Object.assign({},T0,D.T||{});
 let S;
 try{S=Object.assign({w:{},p:{},last:null,z:2},JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={w:{},p:{},last:null,z:2}}
@@ -84,6 +85,7 @@ const applySize=()=>{document.documentElement.style.fontSize=SIZES[Math.max(0,Ma
 applySize();
 
 const $app=document.getElementById('app');
+const PARENT={};D.tiles.forEach(g=>{if(g.children)g.children.forEach(k=>PARENT[k]=g)});
 const SH={};D.shows.forEach(s=>{SH[s.key]=s;s.items.forEach(i=>{i.id=i[0]})});
 function el(tag,cls,txt,attrs){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);return e}
 const thumb=id=>'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg';
@@ -115,22 +117,38 @@ function home(){
     const d=el('div');d.append(el('div','k',T.cont),el('div','t',label(last)));
     b.append(img,d);b.onclick=()=>play(S.last.show,last);w.append(b);
   }
-  const many=D.shows.length>4;
+  const many=D.tiles.length>4;
   const tg=el('div',many?'tgrid':null);w.append(tg);
-  D.shows.forEach(s=>{
-    const b=el('button','tile');b.style.background=s.color;
-    b.append(el('div','ic',s.icon),el('div','nm',s.mr),el('div','en',s.en+' · '+s.items.length+' '+T.parts));
-    b.onclick=()=>go('#/s/'+s.key);tg.append(b);
+  D.tiles.forEach(x=>{
+    const g=x.children?x:null,s=g||SH[x.show];
+    const n=g?g.children.reduce((a,k)=>a+SH[k].items.length,0):s.items.length;
+    const b=el('button','tile'+(D.tiles.length<=3?' big':''));b.style.background=s.color;
+    b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+n+' '+T.parts));
+    b.onclick=()=>go(g?'#/g/'+g.group:'#/s/'+s.key);tg.append(b);
   });
   const z=el('div','size');z.append(el('span',null,T.size));
-  const m=el('button','btn','अ−');m.onclick=()=>{S.z=Math.max(0,S.z-1);save();applySize()};
-  const p=el('button','btn','अ+');p.onclick=()=>{S.z=Math.min(3,S.z+1);save();applySize()};
+  const m=el('button','btn','A−');m.onclick=()=>{S.z=Math.max(0,S.z-1);save();applySize()};
+  const p=el('button','btn','A+');p.onclick=()=>{S.z=Math.min(3,S.z+1);save();applySize()};
   z.append(m,p);w.append(z);$app.append(w);
   window.scrollTo(0,0);
 }
 
 const SORTS=[['new',T.s_new],['old',T.s_old],['pop',T.s_pop],['num',T.s_num]];
 const VIEW={};
+function groupPage(key){
+  const g=D.tiles.find(x=>x.group===key);if(!g){go('#/');return}
+  $app.replaceChildren();
+  const top=el('div','top');
+  const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go('#/');
+  top.append(back,el('h1',null,g.name));$app.append(top);
+  const w=el('div','wrap');
+  g.children.forEach(k=>{
+    const s=SH[k];const b=el('button','tile big');b.style.background=s.color;
+    b.append(el('div','ic',s.icon),el('div','nm',s.name),el('div','en',s.sub+' · '+s.items.length+' '+T.parts));
+    b.onclick=()=>go('#/s/'+k);w.append(b);
+  });
+  $app.append(w);window.scrollTo(0,0);
+}
 let shown=20;
 function sorted(s,o){
   let a=s.items.slice();
@@ -151,8 +169,8 @@ function showPage(key){
   if(o.s==='num'&&!hasNum)o.s='new';
   o.q='';
   const top=el('div','top');
-  const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go('#/');
-  top.append(back,el('h1',null,s.mr));$app.append(top);
+  const back=el('button','btn sm',T.back);back.style.flex='none';back.style.width='auto';back.style.margin='0';back.onclick=()=>go(PARENT[key]?'#/g/'+PARENT[key].group:'#/');
+  top.append(back,el('h1',null,s.name));$app.append(top);
   const w=el('div','wrap wide');
   if(!s.items.length){w.append(el('div','empty',T.none));$app.append(w);return}
   const act=el('div','row');
@@ -250,7 +268,8 @@ function playerPage(key,id){
 function render(){
   stopPlayer();
   const h=location.hash.split('/');
-  if(h[1]==='s')showPage(decodeURIComponent(h[2]||''));
+  if(h[1]==='g')groupPage(h[2]);
+  else if(h[1]==='s')showPage(decodeURIComponent(h[2]||''));
   else if(h[1]==='p')playerPage(h[2],h[3]);
   else home();
 }

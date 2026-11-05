@@ -26,33 +26,27 @@ EP_RE = re.compile(r'\b(?:ep|episode)s?\.?\s*(\d{1,4})\b', re.I)
 
 # What each person sees. Add more people / categories here.
 SHOWS = {
-    'hasya': {'mr': 'महाराष्ट्राची हास्यजत्रा', 'en': 'Hasya Jatra', 'icon': '😂', 'color': '#e8a317'},
-    'cidnew': {'mr': 'सीआयडी — नवीन', 'en': 'CID new episodes', 'icon': '🕵️', 'color': '#2f7fd1'},
-    'cidold': {'mr': 'सीआयडी — जुने', 'en': 'CID older episodes', 'icon': '🎞️', 'color': '#7b5ea7'},
-    'cidclassic': {'mr': 'सीआयडी — सर्वात जुने', 'en': 'CID classic 2013-2018 (opens in YouTube)', 'icon': '📼', 'color': '#5d6d7e'},
+    'hasya': {'name': 'Hasya Jatra', 'sub': 'Maharashtrachi HasyaJatra', 'icon': '😂', 'color': '#e8a317'},
+    'cidnew': {'name': 'New episodes', 'sub': 'CID, Dec 2024 onwards', 'icon': '🕵️', 'color': '#2f7fd1'},
+    'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#7b5ea7'},
+    'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#5d6d7e'},
     # Mummy: Gujarati devotional and wedding songs
-    'bhajan': {'mr': 'ભજન', 'en': 'Bhajan', 'icon': '🙏', 'color': '#d9822b', 'sort': 'pop'},
-    'prabhatiya': {'mr': 'પ્રભાતિયાં', 'en': 'Morning prabhatiya', 'icon': '🌅', 'color': '#c0587a', 'sort': 'pop'},
-    'aarti': {'mr': 'આરતી – ચાલીસા', 'en': 'Aarti & Chalisa', 'icon': '🪔', 'color': '#b8860b', 'sort': 'pop'},
-    'lagna': {'mr': 'લગ્ન ગીત', 'en': 'Lagna geet (wedding songs)', 'icon': '💍', 'color': '#c0392b', 'sort': 'pop'},
-    'dhun': {'mr': 'ધૂન – કીર્તન', 'en': 'Dhun & Kirtan', 'icon': '🕉️', 'color': '#2e8b57', 'sort': 'pop'},
-    'dayro': {'mr': 'ડાયરો – સંતવાણી', 'en': 'Dayro & Santvani', 'icon': '🎤', 'color': '#2f7fd1', 'sort': 'pop'},
-    'garba': {'mr': 'ગરબા', 'en': 'Garba', 'icon': '💃', 'color': '#8e44ad', 'sort': 'pop'},
+    'bhajan': {'name': 'Bhajan', 'sub': 'Devotional songs', 'icon': '🙏', 'color': '#d9822b', 'sort': 'pop'},
+    'prabhatiya': {'name': 'Prabhatiya', 'sub': 'Morning songs', 'icon': '🌅', 'color': '#c0587a', 'sort': 'pop'},
+    'aarti': {'name': 'Aarti & Chalisa', 'sub': 'Prayers', 'icon': '🪔', 'color': '#b8860b', 'sort': 'pop'},
+    'lagna': {'name': 'Lagna Geet', 'sub': 'Wedding songs', 'icon': '💍', 'color': '#c0392b', 'sort': 'pop'},
+    'dhun': {'name': 'Dhun & Kirtan', 'sub': 'Chanting', 'icon': '🕉️', 'color': '#2e8b57', 'sort': 'pop'},
+    'dayro': {'name': 'Dayro & Santvani', 'sub': 'Folk bhajans', 'icon': '🎤', 'color': '#2f7fd1', 'sort': 'pop'},
+    'garba': {'name': 'Garba', 'sub': 'Navratri songs', 'icon': '💃', 'color': '#8e44ad', 'sort': 'pop'},
 }
-MARATHI_T = {}
-GUJARATI_T = {
-    'back': '← પાછળ', 'cont': '▶ ચાલુ રાખો', 'nextc': '▶ શરૂ કરો', 'rand': '🎲 કોઈ પણ', 'more': 'વધુ બતાવો ▼',
-    'done': '✔ જોયું', 'yt': 'YouTube માં ખુલે છે ↗', 'prev': '⏮ પાછળનું', 'next': '⏭ આગળનું', 'list': '☰ યાદી',
-    'mi': 'મિ.', 'fail': 'આ વીડિયો અહીં ચાલતો નથી.', 'open': 'YouTube માં ખોલો ↗', 'size': 'અક્ષરનું કદ',
-    'none': 'કંઈ મળ્યું નથી', 'parts': 'વીડિયો', 's_new': 'નવા', 's_old': 'જૂના', 's_pop': 'વધુ જોયેલા',
-    's_num': 'ક્રમાંક', 'unw': 'ન જોયેલા', 'search': '🔍 શોધો…',
-    'oldnote': 'આ વીડિયો YouTube માં ખુલે છે.',
-}
+# Home screen tiles per person. A group opens a screen with its own big choices.
 PROFILES = {
-    'pappa': {'title': 'पप्पा टीव्ही', 'en': 'Pappa TV', 'color': '#2f7fd1', 'T': MARATHI_T,
-              'shows': ['hasya', 'cidnew', 'cidold', 'cidclassic']},
-    'mummy': {'title': 'મમ્મી ટીવી', 'en': 'Mummy TV', 'color': '#e67e22', 'T': GUJARATI_T,
-              'shows': ['bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba']},
+    'pappa': {'title': 'Pappa TV', 'en': 'Hasya Jatra & CID', 'label': '👨 Pappa', 'color': '#2f7fd1',
+              'tiles': [{'show': 'hasya'},
+                        {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
+                         'children': ['cidnew', 'cidold', 'cidclassic']}]},
+    'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'label': '👩 Mummy', 'color': '#e67e22',
+              'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba')]},
 }
 
 # Official Gujarati labels / channels scanned for Mummy's page
@@ -239,7 +233,7 @@ def show_of(r):
 
 
 DATE_RE = re.compile(r'^\d{1,2}(st|nd|rd|th)?\s+\w+,?\s+\d{4}$|^\d{1,2}\s+\w{3}\s+\d{4}$', re.I)
-NOISE_RE = re.compile(r'full episode|^cid$|^c\.i\.d$|सीआईडी$|सीआयडी$|sign up for sony liv|^new season$|^best comedy$|^thrilling cases$', re.I)
+NOISE_RE = re.compile(r'^cid\s*\(.*\)(\s*season\s*\d+)?$|^season\s*\d+$|full episode|^cid$|^c\.i\.d$|सीआईडी$|सीआयडी$|sign up for sony liv|^new season$|^best comedy$|^thrilling cases$', re.I)
 
 
 def clean_title(t, show):
@@ -248,7 +242,7 @@ def clean_title(t, show):
         segs = [x.strip() for x in re.split(r'\s+-\s+', t)]
         keep = [x for x in segs if x and not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)
                 and not DATE_RE.match(x) and not EP_RE.fullmatch(x)]
-        return ('भाग %d' % n) + (' — ' + ' — '.join(keep) if keep else '')
+        return ('Ep %d' % n) + (' — ' + ' — '.join(keep) if keep else '')
     parts = [x.strip() for x in re.split(r'\s*[|]\s*', t) if x.strip()]
     parts = [x for x in parts if not NOISE_RE.search(x) and not HJ_RE.search(x) and not CID_RE.fullmatch(x)]
     head = parts[0] if parts else t
@@ -378,14 +372,17 @@ def write_site(shows):
     for pid, prof in PROFILES.items():
         folder = os.path.join(PUB, pid)
         os.makedirs(folder, exist_ok=True)
-        data = {'profile': pid, 'title': prof['title'], 'en': prof['en'], 'cidPlaylist': CID_PLAYLIST, 'T': prof['T'],
-                'shows': [dict(SHOWS[k], key=k, items=shows[k]) for k in prof['shows']]}
+        keys = []
+        for t in prof['tiles']:
+            keys += t.get('children') or [t['show']]
+        data = {'profile': pid, 'title': prof['title'], 'cidPlaylist': CID_PLAYLIST, 'tiles': prof['tiles'],
+                'shows': [dict(SHOWS[k], key=k, items=shows[k]) for k in keys]}
         html = tpl.replace('/*DATA*/null', json.dumps(data, ensure_ascii=False, separators=(',', ':')))
         html = html.replace('__TITLE__', prof['title'])
         open(os.path.join(folder, 'index.html'), 'w', encoding='utf-8').write(html)
         write_manifest(folder, prof['title'], prof['color'])
         tiles.append('<a style="background:%s" href="%s/">%s<small>%s</small></a>' % (
-            prof['color'], pid, {'pappa': '👨 पप्पा', 'mummy': '👩 મમ્મી'}.get(pid, pid), prof['en']))
+            prof['color'], pid, prof['label'], prof['en']))
     open(os.path.join(PUB, 'index.html'), 'w', encoding='utf-8').write(HOME % '\n'.join(tiles))
     write_manifest(PUB, 'Family TV', '#c0392b')
     # old address from the first version still works
