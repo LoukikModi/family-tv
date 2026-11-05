@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
-:root{--bg:#f6f3ec;--card:#fff;--tx:#16181d;--dim:#4b5563;--line:#d9d4c7;--ok:#15803d;--ctl:#e6e1d3}
+:root{--bg:#f6f3ec;--card:#fff;--tx:#16181d;--dim:#374151;--line:#d9d4c7;--ok:#15803d;--ctl:#e6e1d3}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:22px}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Noto Sans Devanagari","Noto Sans Gujarati","Segoe UI",Roboto,sans-serif;line-height:1.35;padding-bottom:40px}
@@ -53,12 +53,15 @@ h1{font-size:1.25rem;margin:0;line-height:1.2}
 @media(min-width:620px){.grid{grid-template-columns:repeat(3,1fr)}}
 .grid .card{margin:0}
 .grid .card .b{padding:8px 10px 10px}
-.grid .card .t{font-size:.85rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
+.grid .card .t{font-size:.9rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
 .grid .card .m{font-size:.68rem}
 .grid .badge{font-size:.62rem;padding:3px 8px;top:6px;right:6px}
 .fbtn{min-height:52px;margin:6px 0;font-size:.85rem}
-.pills{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-.pill{min-height:46px;padding:6px 14px;border-radius:999px;border:2px solid #8a8577;background:#fff;color:var(--tx);font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.ctrl{margin:8px 0 4px}
+.pills{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;margin:6px -16px 6px;padding:2px 16px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none}
+.pill{min-height:52px;white-space:nowrap;padding:6px 14px;border-radius:999px;border:2px solid #8a8577;background:#fff;color:var(--tx);font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
 .pill.on{background:#16181d;color:#fff;border-color:#16181d}
 .srow{display:flex;gap:8px;align-items:center}
 .search{flex:1;min-width:0;min-height:48px;border-radius:14px;border:2px solid #8a8577;background:#fff;color:var(--tx);font:inherit;font-size:.9rem;padding:8px 14px;margin:4px 0}
@@ -96,7 +99,7 @@ const T=Object.assign({},T0,D.T||{});
 let S;
 try{S=Object.assign({w:{},p:{},last:null,z:2,fav:{}},JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){S={w:{},p:{},last:null,z:2,fav:{}}}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-const SIZES=[18,22,26,30];
+const SIZES=[20,24,28,32];
 const applySize=()=>{document.documentElement.style.fontSize=SIZES[Math.max(0,Math.min(3,S.z))]+'px'};
 applySize();
 
@@ -115,7 +118,7 @@ function frac(it){if(S.w[it[0]])return 1;const p=S.p[it[0]];return p&&it[3]?Math
 
 function favItems(){const seen={},a=[];D.shows.forEach(s=>s.items.forEach(i=>{if(S.fav[i[0]]&&!seen[i[0]]){seen[i[0]]=1;a.push(i)}}));return a}
 function refreshFav(){SH.fav={key:'fav',name:T.favs,sub:T.favsub,icon:'♥',color:'#be123c',sort:'new',items:favItems()}}
-function toast(msg){const d=el('div','toast',msg);document.body.append(d);setTimeout(()=>d.remove(),9000);d.onclick=()=>d.remove()}
+function toast(msg){const d=el('div','toast',msg);document.body.append(d);setTimeout(()=>d.remove(),15000);d.onclick=()=>d.remove()}
 let sleepAt=0,sleepIdx=0;const SLEEPS=[0,15,30,60];
 setInterval(()=>{if(sleepAt&&Date.now()>=sleepAt){sleepAt=0;sleepIdx=0;try{if(P&&P.pauseVideo)P.pauseVideo()}catch(e){}toast(T.sleepdone)}},10000);
 function markWatched(id){S.w[id]=1;delete S.p[id];save()}
@@ -177,6 +180,8 @@ function groupPage(key){
   $app.append(w);window.scrollTo(0,0);
 }
 let shown=20;
+const MEM={};let prevHash='',curKey=null;
+window.addEventListener('scroll',()=>{if(curKey){(MEM[curKey]=MEM[curKey]||{}).y=window.scrollY}},{passive:true});
 function sorted(s,o){
   let a=s.items.slice();
   if(o.u)a=a.filter(i=>!S.w[i[0]]);
@@ -190,6 +195,8 @@ function sorted(s,o){
 function showPage(key){
   const s=SH[key];if(!s){go('#/');return}
   $app.replaceChildren();
+  const back_=prevHash.indexOf('#/p/'+key+'/')===0&&MEM[key];
+  shown=back_?(MEM[key].shown||20):20;
   S.o=S.o||{};
   const hasNum=s.items.filter(i=>i[4]).length>s.items.length*0.2;
   const o=S.o[key]||(S.o[key]={s:s.sort||(hasNum&&(key==='cidold'||key==='cidclassic')?'num':'new'),u:0});
@@ -216,9 +223,7 @@ function showPage(key){
   if(s.items.every(i=>i[5]))w.append(el('div','note',T.oldnote));
 
   /* sort & search live behind one button so the list stays clean */
-  const fb=el('button','btn fbtn',T.filt);w.append(fb);
-  const panel=el('div');panel.style.display='none';w.append(panel);
-  fb.onclick=()=>{const open=panel.style.display==='none';panel.style.display=open?'block':'none';fb.textContent=open?T.filt2:T.filt};
+  const panel=el('div','ctrl');w.append(panel);
   const pills=el('div','pills');
   SORTS.filter(x=>x[0]!=='num'||hasNum).forEach(([k,n])=>{
     const b=el('button','pill'+(o.s===k?' on':''),n);b.dataset.k=k;
@@ -271,9 +276,12 @@ function showPage(key){
       grid.append(c);
     });
     more.style.display=shown<list.length?'flex':'none';
+    if(MEM[key])MEM[key].shown=shown;
   }
   more.onclick=()=>{shown+=20;draw()};
-  draw();w.append(more);$app.append(w);window.scrollTo(0,0);
+  draw();w.append(more);$app.append(w);
+  curKey=key;(MEM[key]=MEM[key]||{}).shown=shown;
+  window.scrollTo(0,back_?(MEM[key].y||0):0);
 }
 
 /* ---------- player ---------- */
@@ -351,11 +359,13 @@ function playerPage(key,id){
 
 function render(){
   stopPlayer();refreshFav();
+  const nowHash=location.hash;if(nowHash.indexOf('#/s/')!==0)curKey=null;
   const h=location.hash.split('/');
   if(h[1]==='g')groupPage(h[2]);
   else if(h[1]==='s')showPage(decodeURIComponent(h[2]||''));
   else if(h[1]==='p')playerPage(h[2],h[3]);
   else home();
+  prevHash=nowHash;
 }
 window.addEventListener('hashchange',render);
 window.addEventListener('pagehide',()=>{try{savePos()}catch(e){}});
