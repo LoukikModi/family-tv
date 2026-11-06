@@ -32,6 +32,7 @@ SHOWS = {
     'cidold': {'name': 'Older episodes', 'sub': 'CID re-uploads, 2020-2024', 'icon': '🎞️', 'color': '#6d28d9', 'voice': 'hi-IN'},
     'cidclassic': {'name': 'Classic 2013-2018', 'sub': 'CID, opens in YouTube', 'icon': '📼', 'color': '#475569', 'voice': 'hi-IN'},
     # Mummy: Gujarati devotional and wedding songs
+    'jain': {'name': 'Jain Stavan', 'sub': 'Stavan, stuti and Navkar Mantra', 'icon': '🌸', 'color': '#0f766e', 'sort': 'pop', 'voice': 'gu-IN'},
     'bhajan': {'name': 'Bhajan', 'sub': 'Devotional songs', 'icon': '🙏', 'color': '#b45309', 'sort': 'pop', 'voice': 'gu-IN'},
     'prabhatiya': {'name': 'Prabhatiya', 'sub': 'Morning songs', 'icon': '🌅', 'color': '#be185d', 'sort': 'pop', 'voice': 'gu-IN'},
     'aarti': {'name': 'Aarti & Chalisa', 'sub': 'Prayers', 'icon': '🪔', 'color': '#92400e', 'sort': 'pop', 'voice': 'gu-IN'},
@@ -48,7 +49,7 @@ PROFILES = {
                         {'group': 'cid', 'name': 'CID', 'sub': 'Detective series', 'icon': '🕵️', 'color': '#2f7fd1',
                          'children': ['cidclassic', 'cidold', 'cidnew']}]},
     'mummy': {'title': 'Mummy TV', 'en': 'Bhajan, Lagna Geet & more', 'emoji': ['🙏', '🪔', '💍', '🌅'], 'label': '👩 Mummy', 'color': '#c2410c',
-              'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'lagna', 'dhun', 'dayro', 'garba')]},
+              'tiles': [{'show': k} for k in ('bhajan', 'prabhatiya', 'aarti', 'jain', 'lagna', 'dhun', 'dayro', 'garba')]},
 }
 
 # Official Gujarati labels / channels scanned for Mummy's page
@@ -82,6 +83,12 @@ CATS = [
 CAT_RE = [(k, re.compile(v, re.I)) for k, v in CATS]
 MUMMY_ANY = re.compile('|'.join(v for _, v in CATS), re.I)
 MUMMY_BAD = re.compile(r'comedy|jokes|\bdj\b|remix|mashup|full movie|trailer|natak|\bnonstop comedy', re.I)
+JAIN_RE = re.compile(r'\bjain\b|જૈન|जैन|navkar|નવકાર|नवकार|namokar|namokaar|namo arihant|નમો અરિહંત|bhaktamar|ભક્તામર|tirthankar|તીર્થંકર|paryushan|પર્યુષણ|samvatsari|shatrunjay|શત્રુંજય|palitana|પાલીતાણા|chaityavandan|ચૈત્યવંદન|pratikraman|પ્રતિક્રમણ|simandhar|સીમંધર|parshwanath|parasnath|પાર્શ્વનાથ|adinath|આદિનાથ|rushabhdev|ઋષભદેવ|mahavir (?:swami|jayanti|vandana|janma|stavan|bhajan)|મહાવીર (?:સ્વામી|જયંતી|જયંતિ|વંદના|જન્મ|અમૃતવાણી)|siddhachakra|સિદ્ધચક્ર|gautam swami|ગૌતમ સ્વામી|diksha|દીક્ષા|mangal divo|મંગલ દીવો', re.I)
+# singers whose surname is Jain must not turn their garba and bhajans into Jain songs
+JAIN_ARTIST = re.compile(r'(?:pamela|pamel|pamlela|pamala|lalita|paras|praveen|ramesh|sanjay|rakesh)\s*jain|jain\s*(?:pamela|pamel)|पामेला\s*जैन|પામેલા\s*જૈન|લલિતા\s*જૈન', re.I)
+JAIN_QUERIES = ['jain stavan gujarati', 'જૈન સ્તવન', 'jain stuti gujarati', 'navkar mahamantra', 'bhaktamar stotra',
+                'mahavir jayanti stavan', 'paryushan stavan', 'jain bhajan gujarati', 'jain aarti mangal divo',
+                'chaityavandan stavan', 'shatrunjay palitana stavan', 'jain gurubhakti geet']
 MUMMY_LIMIT = 800          # keep the best-viewed videos per category so the page stays light
 
 
@@ -188,6 +195,39 @@ def collect(lib, wanted, source_playlists, title_re, upload_pages, playlist_page
     return len(found)
 
 
+def collect_search(lib, queries, pages, flag):
+    """Find videos by search (100 quota units a page, so run once) and mark them with `flag`."""
+    import html
+    found = {}
+    for q in queries:
+        tok = None
+        for _ in range(pages):
+            kw = dict(part='snippet', q=q, type='video', videoEmbeddable='true', maxResults=50, regionCode='IN')
+            if tok:
+                kw['pageToken'] = tok
+            d = api('search', **kw)
+            for it in d.get('items', []):
+                vid = it.get('id', {}).get('videoId')
+                if vid:
+                    sn = it.get('snippet', {})
+                    found[vid] = (html.unescape(sn.get('title', '')), (sn.get('publishedAt') or '')[:10])
+            tok = d.get('nextPageToken')
+            if not tok:
+                break
+    ids = list(found)
+    for i in range(0, len(ids), 50):
+        d = api('videos', part='contentDetails,statistics,status', id=','.join(ids[i:i + 50]))
+        for v in d.get('items', []):
+            title, pub = found[v['id']]
+            rec = lib.setdefault(v['id'], {'t': title, 'p': pub})
+            rec['s'] = dur(v['contentDetails'].get('duration'))
+            rec['v'] = int(v.get('statistics', {}).get('viewCount', 0))
+            rec['e'] = 1 if v.get('status', {}).get('embeddable') else 0
+            rec['k'] = 'm'
+            rec[flag] = 1
+    return len(found)
+
+
 def pages_for(state, key, mode):
     """Deep scan a source once (or when asked); afterwards only look at the newest uploads."""
     if mode == 'deep' or not state['deep'].get(key):
@@ -217,6 +257,11 @@ def fetch(lib, state, mode):
         n, deep = pages_for(state, c, mode)
         n3 += collect(lib, None, [('UU' + c[2:], n)], MUMMY_ANY, n, 60, kind='m')
         done(c, deep)
+    # Jain stavans: few of the channels above carry them, so search once and keep what is found
+    if not state['deep'].get('jain_search'):
+        n4 = collect_search(lib, JAIN_QUERIES, 2, 'j')
+        state['deep']['jain_search'] = True
+        print('jain search: %d videos' % n4)
     print('candidates: hasya-ish %d, cid-ish %d, mummy-ish %d, library %d' % (n1, n2, n3, len(lib)))
 
 
@@ -362,6 +407,8 @@ def song_cat(r):
     t = r['t']
     if not r['e'] or r['s'] < 150 or r['s'] > 3 * 3600 or MUMMY_BAD.search(t):
         return None
+    if r.get('j') or JAIN_RE.search(JAIN_ARTIST.sub('', t)):
+        return 'jain'
     for k, rx in CAT_RE:
         if rx.search(t):
             return k
